@@ -1,0 +1,62 @@
+<?php
+
+declare(strict_types=1);
+
+$config = require dirname(__DIR__) . '/config.php';
+
+date_default_timezone_set((string)($config['app']['timezone'] ?? 'Europe/Minsk'));
+
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_set_cookie_params([
+        'httponly' => true,
+        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'samesite' => 'Lax',
+    ]);
+    session_start();
+}
+
+require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/Database.php';
+require_once __DIR__ . '/Repositories.php';
+
+$db = new Database($config['database']);
+$pdo = $db->pdo();
+
+
+
+
+function client_ip(): string
+{
+    $realIp = trim(
+        (string) ($_SERVER['HTTP_X_REAL_IP'] ?? '')
+    );
+
+    if (
+        $realIp !== ''
+        && filter_var($realIp, FILTER_VALIDATE_IP)
+    ) {
+        return $realIp;
+    }
+
+    $forwardedFor = trim(
+        (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '')
+    );
+
+    if ($forwardedFor !== '') {
+        foreach (explode(',', $forwardedFor) as $ip) {
+            $ip = trim($ip);
+
+            if (filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
+        }
+    }
+
+    $remoteAddr = trim(
+        (string) ($_SERVER['REMOTE_ADDR'] ?? '')
+    );
+
+    return filter_var($remoteAddr, FILTER_VALIDATE_IP)
+        ? $remoteAddr
+        : '';
+}
