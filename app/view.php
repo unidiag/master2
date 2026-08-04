@@ -252,7 +252,16 @@ declare(strict_types=1);
 
                         <div class="karandash-list">
                             <?php foreach ($items as $item): ?>
-                                <article class="karandash-card">
+                                <article
+                                    class="karandash-card karandash-card--editable"
+                                    role="button"
+                                    tabindex="0"
+                                    data-karandash-edit='<?= e(json_encode([
+                                        'address' => (string) ($item['address'] ?? ''),
+                                        'descr' => (string) ($item['descr'] ?? ''),
+                                        'apartment' => (string) ($item['apartment'] ?? ''),
+                                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>'
+                                >
                                     <div class="karandash-card__head">
                                         <strong>
                                             <?php if (
@@ -293,7 +302,8 @@ declare(strict_types=1);
                                     <div class="karandash-card__address">
                                         <?= e(
                                             (string) (
-                                                $item['address'] ?? ''
+                                                $item['account']
+                                                ?: 'Абонент не найден'
                                             )
                                         ) ?>
                                     </div>
@@ -328,7 +338,97 @@ declare(strict_types=1);
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
+<dialog class="modal" id="karandash-edit-modal">
+    <form method="post">
+        <div class="modal-head">
+            <h2>Изменить запись</h2>
 
+            <button
+                type="button"
+                class="icon-button"
+                data-modal-close
+                aria-label="Закрыть"
+            >
+                ×
+            </button>
+        </div>
+
+        <input
+            type="hidden"
+            name="csrf_token"
+            value="<?= e(csrf_token()) ?>"
+        >
+
+        <input
+            type="hidden"
+            name="action"
+            value="karandash_add"
+        >
+
+        <input
+            type="hidden"
+            name="return_module"
+            value="karandash"
+        >
+
+        <input
+            type="hidden"
+            name="address"
+            id="karandash-edit-address"
+            value=""
+        >
+
+        <input
+            type="hidden"
+            name="house"
+            value=""
+        >
+
+        <input
+            type="hidden"
+            name="personal"
+            value=""
+        >
+
+        <div class="karandash-address">
+            <small>Адрес</small>
+
+            <strong id="karandash-edit-address-label">
+                —
+            </strong>
+        </div>
+
+        <label>
+            Причина
+
+            <textarea
+                class="input"
+                id="karandash-edit-descr"
+                name="descr"
+                rows="6"
+                maxlength="2000"
+                placeholder="Почему абонент находится на карандаше"
+            ></textarea>
+        </label>
+
+        <div class="modal-actions">
+            <button
+                class="button"
+                type="button"
+                data-modal-close
+            >
+                Отмена
+            </button>
+
+            <button
+                class="button primary"
+                type="submit"
+            >
+                Сохранить
+            </button>
+        </div>
+    </form>
+</dialog>
             
 
 <?php elseif ($module === 'debtors'): ?>
@@ -800,6 +900,119 @@ elseif ($module === 'stat'): ?>
                 </button>
             </form>
         </div>
+
+
+
+
+        <dialog class="modal" id="karandash-modal">
+            <form method="post">
+                <div class="modal-head">
+                    <h2>Взять на карандаш</h2>
+
+                    <button
+                        type="button"
+                        class="icon-button"
+                        data-modal-close
+                        aria-label="Закрыть"
+                    >
+                        ×
+                    </button>
+                </div>
+
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e(csrf_token()) ?>"
+                >
+
+                <input
+                    type="hidden"
+                    name="return_module"
+                    value="stat"
+                >
+
+                <input
+                    type="hidden"
+                    name="action"
+                    value="karandash_add"
+                >
+
+                <input
+                    type="hidden"
+                    name="house"
+                    value="<?= e($house) ?>"
+                >
+
+                <input
+                    type="hidden"
+                    name="personal"
+                    value="<?= e($personal) ?>"
+                >
+
+                <input
+                    type="hidden"
+                    name="address"
+                    value="<?= e($subscriberAddress) ?>"
+                >
+
+                <div class="karandash-address">
+                    <span>Абонент</span>
+
+                    <strong>
+                        <?= e(
+                            $subscriber !== ''
+                                ? $subscriber
+                                : 'Без имени'
+                        ) ?>
+                    </strong>
+                </div>
+
+                <div class="karandash-address">
+                    <span>Адрес</span>
+
+                    <strong>
+                        <?= e(
+                            $subscriberAddress !== ''
+                                ? $subscriberAddress
+                                : $house
+                        ) ?>
+                    </strong>
+                </div>
+
+                <label>
+                    Причина
+
+                    <textarea
+                        class="input"
+                        name="descr"
+                        rows="6"
+                        maxlength="2000"
+                        required
+                        placeholder="Почему абонент взят на карандаш"
+                    ></textarea>
+                </label>
+
+                <div class="modal-actions">
+                    <button
+                        class="button"
+                        type="button"
+                        data-modal-close
+                    >
+                        Отмена
+                    </button>
+
+                    <button
+                        class="button primary"
+                        type="submit"
+                    >
+                        Сохранить
+                    </button>
+                </div>
+            </form>
+        </dialog>
+
+
+
     </div>
 
 
@@ -1289,85 +1502,5 @@ document.addEventListener('DOMContentLoaded', function () {
 <?php if (in_array($module,['zayavki','podkluchki'],true)): ?>
 <dialog class="modal" id="create-modal"><form method="post"><div class="modal-head"><h2><?= $module==='zayavki'?'Новая заявка':'Новое подключение' ?></h2><button type="button" class="icon-button" data-modal-close>×</button></div><input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="create"><label>Абонент<input class="input" name="abonent" maxlength="50" required autocomplete="name"></label><?php if($module==='zayavki'): ?><label>Дополнительное имя<input class="input" name="abonent_ajax" maxlength="50"></label><?php endif; ?><label>Адрес<input class="input" name="address" maxlength="50" required autocomplete="street-address"></label><?php if($module==='zayavki'): ?><label>Дополнительный адрес<input class="input" name="address_ajax" maxlength="50"></label><?php endif; ?><label>Описание<input class="input" name="description" maxlength="50" required></label><label>Дополнительно<input class="input" name="other" maxlength="50"></label><?php if($module==='zayavki'): ?><label>Стоимость<input class="input" name="cost" maxlength="10" inputmode="decimal"></label><?php endif; ?><button class="button primary full" type="submit">Сохранить</button></form></dialog>
 <dialog class="modal" id="complete-modal"><form method="post"><div class="modal-head"><h2>Завершение</h2><button type="button" class="icon-button" data-modal-close>×</button></div><input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="complete"><input type="hidden" name="id" id="complete-id"><label>Мастер<input class="input" name="master" maxlength="50" required></label><label>Результат<input class="input" name="result" maxlength="50" required></label><label id="cost-field">Стоимость<input class="input" name="cost" maxlength="10" inputmode="decimal"></label><button class="button primary full" type="submit">Сохранить</button></form></dialog>
-<?php if ($module === 'stat' && $personal !== ''): ?>
-    <dialog class="modal" id="karandash-modal">
-        <form method="post">
-            <div class="modal-head">
-                <h2>Взять на карандаш</h2>
-
-                <button
-                    type="button"
-                    class="icon-button"
-                    data-modal-close
-                >
-                    ×
-                </button>
-            </div>
-
-            <input
-                type="hidden"
-                name="csrf_token"
-                value="<?= e(csrf_token()) ?>"
-            >
-
-            <input
-                type="hidden"
-                name="action"
-                value="karandash_add"
-            >
-
-            <input
-                type="hidden"
-                name="house"
-                value="<?= e($house) ?>"
-            >
-
-            <input
-                type="hidden"
-                name="personal"
-                value="<?= e($personal) ?>"
-            >
-
-            <input
-                type="hidden"
-                name="address"
-                value="<?= e($subscriberAddress) ?>"
-            >
-
-            <div class="karandash-address">
-                <small>Адрес</small>
-                <strong>
-                    <?= e(
-                        $subscriberAddress !== ''
-                            ? $subscriberAddress
-                            : 'Адрес не определён'
-                    ) ?>
-                </strong>
-            </div>
-
-            <label>
-                Причина
-
-                <textarea
-                    class="input"
-                    name="descr"
-                    rows="6"
-                    maxlength="2000"
-                    required
-                    autofocus
-                    placeholder="Почему абонент взят на карандаш"
-                ></textarea>
-            </label>
-
-            <button
-                class="button primary full"
-                type="submit"
-                <?= $subscriberAddress === '' ? 'disabled' : '' ?>
-            >
-                Сохранить
-            </button>
-        </form>
-    </dialog>
-<?php endif; ?>
 <?php endif; ?>
 </body></html>

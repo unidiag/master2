@@ -996,13 +996,31 @@ final class KarandashRepository
     {
         $statement = $this->db->query(
             'SELECT
-                id,
-                address,
-                descr,
-                `time`,
-                `update`
-             FROM master_karandash
-             ORDER BY address ASC, `update` DESC, id DESC'
+                k.id,
+                k.address,
+                k.descr,
+                k.`time`,
+                k.`update`,
+
+                COALESCE((
+                    SELECT db.account
+                    FROM master_database AS db
+                    WHERE db.address = k.address
+                    ORDER BY
+                        CASE
+                            WHEN db.`update` REGEXP \'^[0-9]+$\'
+                            THEN CAST(db.`update` AS UNSIGNED)
+                            ELSE 0
+                        END DESC,
+                        db.id DESC
+                    LIMIT 1
+                ), \'\') AS account
+
+            FROM master_karandash AS k
+            ORDER BY
+                k.address ASC,
+                k.`update` DESC,
+                k.id DESC'
         );
 
         $houses = [];

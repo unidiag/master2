@@ -368,18 +368,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
     if ($postAction === 'karandash_add') {
-        verify_csrf();
-
         $personal = post_string('personal', 20);
         $house = post_string('house', 100);
         $address = post_string('address', 255);
         $descr = post_string('descr', 2000);
+        $returnModule = post_string('return_module', 30);
+
+        $returnModule = $returnModule === 'karandash'
+            ? 'karandash'
+            : 'stat';
 
         if ($address === '') {
             flash(
                 'error',
                 'Не удалось определить адрес абонента.'
             );
+
+            if ($returnModule === 'karandash') {
+                redirect([
+                    'module' => 'karandash',
+                ]);
+            }
 
             redirect([
                 'module' => 'stat',
@@ -388,7 +397,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
         }
 
-        if ($descr === '') {
+        if (
+            $descr === ''
+            && $returnModule !== 'karandash'
+        ) {
             flash(
                 'error',
                 'Укажите причину постановки на карандаш.'
@@ -415,12 +427,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 : 'Абонент взят на карандаш.'
         );
 
+        if ($returnModule === 'karandash') {
+            redirect([
+                'module' => 'karandash',
+            ]);
+        }
+
         redirect([
             'module' => 'stat',
             'house' => $house,
             'personal' => $personal,
         ]);
     }
+
 
 
 
