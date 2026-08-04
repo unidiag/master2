@@ -1,3 +1,115 @@
+let pageLoading = false;
+
+function showPageLoader() {
+  if (pageLoading) {
+    return;
+  }
+
+  pageLoading = true;
+  document.body.classList.add('is-page-loading');
+}
+
+function hidePageLoader() {
+  pageLoading = false;
+  document.body.classList.remove('is-page-loading');
+}
+
+function isInternalNavigationLink(link) {
+  if (!(link instanceof HTMLAnchorElement)) {
+    return false;
+  }
+
+  const href = link.getAttribute('href');
+
+  if (
+    !href
+    || href.startsWith('#')
+    || href.startsWith('javascript:')
+    || href.startsWith('mailto:')
+    || href.startsWith('tel:')
+  ) {
+    return false;
+  }
+
+  if (
+    link.target === '_blank'
+    || link.hasAttribute('download')
+  ) {
+    return false;
+  }
+
+  let url;
+
+  try {
+    url = new URL(link.href, window.location.href);
+  } catch {
+    return false;
+  }
+
+  return url.origin === window.location.origin;
+}
+
+document.addEventListener('click', (event) => {
+  if (
+    event.defaultPrevented
+    || event.button !== 0
+    || event.ctrlKey
+    || event.metaKey
+    || event.shiftKey
+    || event.altKey
+  ) {
+    return;
+  }
+
+  const link = event.target.closest('a');
+
+  if (!isInternalNavigationLink(link)) {
+    return;
+  }
+
+  const currentUrl = new URL(window.location.href);
+  const targetUrl = new URL(link.href, window.location.href);
+
+  if (
+    currentUrl.pathname === targetUrl.pathname
+    && currentUrl.search === targetUrl.search
+    && targetUrl.hash !== ''
+  ) {
+    return;
+  }
+
+  showPageLoader();
+});
+
+document.addEventListener('submit', (event) => {
+  if (event.defaultPrevented) {
+    return;
+  }
+
+  const form = event.target;
+
+  if (!(form instanceof HTMLFormElement)) {
+    return;
+  }
+
+  showPageLoader();
+});
+
+window.addEventListener('pageshow', () => {
+  hidePageLoader();
+});
+
+window.addEventListener('pagehide', () => {
+  showPageLoader();
+});
+
+
+
+
+
+
+
+
 const sidebar = document.querySelector('[data-sidebar]');
 
 document

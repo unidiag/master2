@@ -34,6 +34,18 @@ declare(strict_types=1);
     <script src="assets/app.js?v=1" defer></script>
 </head>
 <body>
+
+<div
+    class="page-loader"
+    data-page-loader
+    role="status"
+    aria-live="polite"
+    aria-label="Загрузка страницы"
+>
+    <div class="page-loader__spinner"></div>
+    <div class="page-loader__text">Загрузка…</div>
+</div>
+
 <header class="topbar">
     <button class="icon-button menu-button" type="button" data-menu-toggle aria-label="Открыть меню">☰</button>
     <a class="brand" href="<?= e(url(['module' => 'zayavki'])) ?>">Master2</a>
