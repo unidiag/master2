@@ -54,10 +54,21 @@ final class TicketRepository
         $q->execute(compact('id', 'master', 'result', 'cost'));
     }
 
-    public function delete(int $id): void
+    public function withdraw(int $id, string $master): void
     {
-        $q = $this->db->prepare('DELETE FROM master_zayavki WHERE id = :id');
-        $q->execute(['id' => $id]);
+        $query = $this->db->prepare(
+            'UPDATE master_zayavki
+            SET master = :master,
+                result = :result
+            WHERE id = :id
+            AND COALESCE(result, \'\') = \'\''
+        );
+
+        $query->execute([
+            'id' => $id,
+            'master' => $master,
+            'result' => 'СНЯТО',
+        ]);
     }
 }
 
@@ -111,10 +122,21 @@ final class ConnectionRepository
         $q->execute(compact('id', 'master', 'result'));
     }
 
-    public function delete(int $id): void
+    public function withdraw(int $id, string $master): void
     {
-        $q = $this->db->prepare('DELETE FROM master_podkluchki WHERE id = :id');
-        $q->execute(['id' => $id]);
+        $query = $this->db->prepare(
+            'UPDATE master_podkluchki
+            SET master = :master,
+                result = :result
+            WHERE id = :id
+            AND COALESCE(result, \'\') = \'\''
+        );
+
+        $query->execute([
+            'id' => $id,
+            'master' => $master,
+            'result' => 'СНЯТО',
+        ]);
     }
 }
 

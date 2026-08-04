@@ -340,3 +340,42 @@ function require_auth(
 }
 
 
+
+
+
+function telegram_notify(
+    TelegramService $telegram,
+    array $telegramConfig,
+    string $message
+): void {
+    if (!($telegramConfig['enabled'] ?? false)) {
+        return;
+    }
+
+    $chatIds = $telegramConfig['chat_ids'] ?? [];
+
+    if (!is_array($chatIds) || !$chatIds) {
+        return;
+    }
+
+    try {
+        $results = $telegram->sendToMany(
+            $chatIds,
+            $message
+        );
+
+        foreach ($results as $chatId => $sent) {
+            if (!$sent) {
+                error_log(
+                    'Telegram notification failed for chat_id: '
+                    . $chatId
+                );
+            }
+        }
+    } catch (Throwable $exception) {
+        error_log(
+            'Telegram notification error: '
+            . $exception->getMessage()
+        );
+    }
+}

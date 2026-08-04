@@ -45,6 +45,188 @@ $subscribers = new SubscriberRepository($pdo);
 
 
 
+
+
+
+
+
+
+
+
+
+function ticket_telegram_message(
+    array $ticket,
+    string $action,
+    string $master,
+    string $result,
+    string $cost = ''
+): string {
+    $isWithdrawn = $action === 'withdraw';
+
+    $message = $isWithdrawn
+        ? "⛔ <b>Заявка снята</b>\n\n"
+        : "✅ <b>Заявка выполнена</b>\n\n";
+
+    $abonent = trim(
+        (string) (
+            $ticket['abonent_ajax']
+            ?? $ticket['abonent']
+            ?? ''
+        )
+    );
+
+    $address = trim(
+        (string) (
+            $ticket['address_ajax']
+            ?? $ticket['address']
+            ?? ''
+        )
+    );
+
+    $description = trim(
+        (string) ($ticket['desc'] ?? '')
+    );
+
+    $other = trim(
+        (string) ($ticket['other'] ?? '')
+    );
+
+    $message .=
+        '<b>Заявка №:</b> '
+        . telegram_html($ticket['id'] ?? '')
+        . "\n";
+
+    if ($abonent !== '') {
+        $message .=
+            '<b>Абонент:</b> '
+            . telegram_html($abonent)
+            . "\n";
+    }
+
+    if ($address !== '') {
+        $message .=
+            '<b>Адрес:</b> '
+            . telegram_html($address)
+            . "\n";
+    }
+
+    if ($description !== '') {
+        $message .=
+            '<b>Описание:</b> '
+            . telegram_html($description)
+            . "\n";
+    }
+
+    if ($other !== '') {
+        $message .=
+            '<b>Дополнительно:</b> '
+            . telegram_html($other)
+            . "\n";
+    }
+
+    $message .=
+        '<b>Мастер:</b> '
+        . telegram_html($master)
+        . "\n"
+        . '<b>Результат:</b> '
+        . telegram_html($result);
+
+    if ($cost !== '') {
+        $message .=
+            "\n"
+            . '<b>Стоимость:</b> '
+            . telegram_html($cost);
+    }
+
+    $message .=
+        "\n"
+        . '<b>Время:</b> '
+        . telegram_html(date('d.m.Y H:i:s'));
+
+    return $message;
+}
+
+function connection_telegram_message(
+    array $connection,
+    string $action,
+    string $master,
+    string $result
+): string {
+    $isWithdrawn = $action === 'withdraw';
+
+    $message = $isWithdrawn
+        ? "⛔ <b>Подключение снято</b>\n\n"
+        : "✅ <b>Подключение завершено</b>\n\n";
+
+    $abonent = trim(
+        (string) ($connection['abonent'] ?? '')
+    );
+
+    $address = trim(
+        (string) ($connection['address'] ?? '')
+    );
+
+    $description = trim(
+        (string) ($connection['desc'] ?? '')
+    );
+
+    $other = trim(
+        (string) ($connection['other'] ?? '')
+    );
+
+    $message .=
+        '<b>Подключение №:</b> '
+        . telegram_html($connection['id'] ?? '')
+        . "\n";
+
+    if ($abonent !== '') {
+        $message .=
+            '<b>Абонент:</b> '
+            . telegram_html($abonent)
+            . "\n";
+    }
+
+    if ($address !== '') {
+        $message .=
+            '<b>Адрес:</b> '
+            . telegram_html($address)
+            . "\n";
+    }
+
+    if ($description !== '') {
+        $message .=
+            '<b>Описание:</b> '
+            . telegram_html($description)
+            . "\n";
+    }
+
+    if ($other !== '') {
+        $message .=
+            '<b>Дополнительно:</b> '
+            . telegram_html($other)
+            . "\n";
+    }
+
+    $message .=
+        '<b>Мастер:</b> '
+        . telegram_html($master)
+        . "\n"
+        . '<b>Результат:</b> '
+        . telegram_html($result)
+        . "\n"
+        . '<b>Время:</b> '
+        . telegram_html(date('d.m.Y H:i:s'));
+
+    return $message;
+}
+
+
+
+
+
+
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $postAction = post_string('action', 30);
 
@@ -185,24 +367,106 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($postAction === 'create') {
             $tickets->create([
                 'abonent' => post_string('abonent', 50),
-                'abonent_ajax' => post_string('abonent_ajax', 50),
+                'abonent_ajax' => post_string(
+                    'abonent_ajax',
+                    50
+                ),
                 'address' => post_string('address', 50),
-                'address_ajax' => post_string('address_ajax', 50),
+                'address_ajax' => post_string(
+                    'address_ajax',
+                    50
+                ),
                 'other' => post_string('other', 50),
-                'description' => post_string('description', 50),
+                'description' => post_string(
+                    'description',
+                    50
+                ),
                 'cost' => post_string('cost', 10),
                 'who' => current_user(),
             ]);
+
             flash('success', 'Заявка добавлена');
-        } elseif ($postAction === 'complete' && $id > 0) {
-            $tickets->complete($id, post_string('master', 50), post_string('result', 50), post_string('cost', 10));
+        } elseif (
+            $postAction === 'complete'
+            && $id > 0
+        ) {
+            $ticket = $tickets->find($id);
+
+            if ($ticket === null) {
+                flash('error', 'Заявка не найдена');
+                redirect(['module' => 'zayavki']);
+            }
+
+            $master = post_string('master', 50);
+            $result = post_string('result', 50);
+            $cost = post_string('cost', 10);
+
+            $tickets->complete(
+                $id,
+                $master,
+                $result,
+                $cost
+            );
+
+            telegram_notify(
+                $telegram,
+                $config['telegram'] ?? [],
+                ticket_telegram_message(
+                    $ticket,
+                    'complete',
+                    $master,
+                    $result,
+                    $cost
+                )
+            );
+
             flash('success', 'Заявка выполнена');
-        } elseif ($postAction === 'delete' && $id > 0) {
-            $tickets->delete($id);
-            flash('success', 'Заявка удалена');
+        } elseif (
+            $postAction === 'withdraw'
+            && $id > 0
+        ) {
+            $ticket = $tickets->find($id);
+
+            if ($ticket === null) {
+                flash('error', 'Заявка не найдена');
+                redirect(['module' => 'zayavki']);
+            }
+
+            $master = current_user();
+            $result = 'СНЯТО';
+
+            $tickets->withdraw(
+                $id,
+                $master
+            );
+
+            telegram_notify(
+                $telegram,
+                $config['telegram'] ?? [],
+                ticket_telegram_message(
+                    $ticket,
+                    'withdraw',
+                    $master,
+                    $result
+                )
+            );
+
+            flash('success', 'Заявка снята');
         }
+
         redirect(['module' => 'zayavki']);
     }
+
+
+    
+
+
+
+
+
+
+
+
 
     if ($module === 'podkluchki') {
         if ($postAction === 'create') {
@@ -210,19 +474,87 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'abonent' => post_string('abonent', 50),
                 'address' => post_string('address', 50),
                 'other' => post_string('other', 50),
-                'description' => post_string('description', 50),
+                'description' => post_string(
+                    'description',
+                    50
+                ),
                 'who' => current_user(),
             ]);
+
             flash('success', 'Подключение добавлено');
-        } elseif ($postAction === 'complete' && $id > 0) {
-            $connections->complete($id, post_string('master', 50), post_string('result', 50));
+        } elseif (
+            $postAction === 'complete'
+            && $id > 0
+        ) {
+            $connection = $connections->find($id);
+
+            if ($connection === null) {
+                flash('error', 'Подключение не найдено');
+                redirect(['module' => 'podkluchki']);
+            }
+
+            $master = post_string('master', 50);
+            $result = post_string('result', 50);
+
+            $connections->complete(
+                $id,
+                $master,
+                $result
+            );
+
+            telegram_notify(
+                $telegram,
+                $config['telegram'] ?? [],
+                connection_telegram_message(
+                    $connection,
+                    'complete',
+                    $master,
+                    $result
+                )
+            );
+
             flash('success', 'Подключение завершено');
-        } elseif ($postAction === 'delete' && $id > 0) {
-            $connections->delete($id);
-            flash('success', 'Подключение удалено');
+        } elseif (
+            $postAction === 'withdraw'
+            && $id > 0
+        ) {
+            $connection = $connections->find($id);
+
+            if ($connection === null) {
+                flash('error', 'Подключение не найдено');
+                redirect(['module' => 'podkluchki']);
+            }
+
+            $master = current_user();
+            $result = 'СНЯТО';
+
+            $connections->withdraw(
+                $id,
+                $master
+            );
+
+            telegram_notify(
+                $telegram,
+                $config['telegram'] ?? [],
+                connection_telegram_message(
+                    $connection,
+                    'withdraw',
+                    $master,
+                    $result
+                )
+            );
+
+            flash('success', 'Подключение снято');
         }
+
         redirect(['module' => 'podkluchki']);
     }
+
+
+
+
+
+
 }
 
 $titles = [
