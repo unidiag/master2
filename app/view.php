@@ -20,6 +20,8 @@ declare(strict_types=1);
 /** @var string $subscriber */
 /** @var string $subscriberAddress */
 /** @var string $subscriberTariff */
+/** @var string $subscriberOnKarandash */
+/** @var string $subscriberKarandashDescr */
 
 
 ?>
@@ -264,8 +266,19 @@ declare(strict_types=1);
 
                         <div class="karandash-list">
                             <?php foreach ($items as $item): ?>
+
+                                <?php
+                                $descr = trim(
+                                    (string) ($item['descr'] ?? '')
+                                );
+
+                                $karandashCardClass = $descr === ''
+                                    ? ' karandash-card--empty'
+                                    : '';
+                                ?>
+
                                 <article
-                                    class="karandash-card karandash-card--editable"
+                                    class="karandash-card karandash-card--editable<?= $karandashCardClass ?>"
                                     role="button"
                                     tabindex="0"
                                     data-karandash-edit='<?= e(json_encode([
@@ -320,13 +333,17 @@ declare(strict_types=1);
                                         ) ?>
                                     </div>
 
-                                    <p>
-                                        <?= nl2br(e(
-                                            (string) (
-                                                $item['descr'] ?? ''
-                                            )
-                                        )) ?>
-                                    </p>
+                                    <?php
+                                    $descr = trim(
+                                        (string) ($item['descr'] ?? '')
+                                    );
+                                    ?>
+
+                                    <?php if ($descr !== ''): ?>
+                                        <p class="karandash-card__descr">
+                                            <?= nl2br(e($descr)) ?>
+                                        </p>
+                                    <?php endif; ?>
 
                                     <?php if (
                                         (string) ($item['time'] ?? '')
@@ -862,6 +879,18 @@ elseif ($module === 'stat'): ?>
                     · <?= e($subscriberTariff) ?>
                 <?php endif; ?>
             </div>
+
+            <?php if ($subscriberKarandashDescr !== ''): ?>
+                <button
+                    class="payments-heading__karandash"
+                    type="button"
+                    data-modal-open="karandash-modal"
+                    title="Изменить запись на карандаше"
+                >
+                    <?= nl2br(e($subscriberKarandashDescr)) ?>
+                </button>
+            <?php endif; ?>
+
         </div>
 
         <div class="payments-heading__actions">
@@ -870,7 +899,10 @@ elseif ($module === 'stat'): ?>
                 type="button"
                 data-modal-open="karandash-modal"
             >
-                ✎ Взять на карандаш
+                <?= $subscriberOnKarandash
+                    ? '✎ Изменить карандаш'
+                    : '✎ Взять на карандаш'
+                ?>
             </button>
 
             <form
@@ -919,7 +951,12 @@ elseif ($module === 'stat'): ?>
         <dialog class="modal" id="karandash-modal">
             <form method="post">
                 <div class="modal-head">
-                    <h2>Взять на карандаш</h2>
+                    <h2>
+                        <?= $subscriberOnKarandash
+                            ? 'Изменить запись'
+                            : 'Взять на карандаш'
+                        ?>
+                    </h2>
 
                     <button
                         type="button"
@@ -999,9 +1036,9 @@ elseif ($module === 'stat'): ?>
                         name="descr"
                         rows="6"
                         maxlength="2000"
-                        required
+                        <?= $subscriberOnKarandash ? '' : 'required' ?>
                         placeholder="Почему абонент взят на карандаш"
-                    ></textarea>
+                    ><?= e($subscriberKarandashDescr) ?></textarea>
                 </label>
 
                 <div class="modal-actions">
@@ -1145,6 +1182,21 @@ elseif ($module === 'stat'): ?>
                     >
                         <?= e((string) ($apartment['subscriber'] ?? '')) ?>
                     </div>
+
+                    <?php
+                    $karandashDescr = trim(
+                        (string) ($apartment['karandash_descr'] ?? '')
+                    );
+                    ?>
+
+                    <?php if ($karandashDescr !== ''): ?>
+                        <div
+                            class="apartment-card__karandash"
+                            title="<?= e($karandashDescr) ?>"
+                        >
+                            <?= nl2br(e($karandashDescr)) ?>
+                        </div>
+                    <?php endif; ?>
 
                     <?php if ($debt > 0): ?>
                         <div class="apartment-card__debt">
@@ -1466,12 +1518,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
                         </div>
 
-                        <?php if ($debt > 0): ?>
+                        <?php
+                        $karandashCount = (int) ($house['karandash'] ?? 0);
+                        
+                        if ($debt > 0): ?>
                             <div class="house-card__debt">
                                 <strong>
                                     <?= e(number_format($debt, 2, ',', ' ')) ?>
                                     <small>(<?= e($debtors) ?> аб.)</small>
                                 </strong>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($karandashCount > 0): ?>
+                            <div class="house-card__karandash">
+                                <strong><?= e($karandashCount) ?></strong>
                             </div>
                         <?php endif; ?>
                     </header>

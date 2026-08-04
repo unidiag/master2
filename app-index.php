@@ -397,9 +397,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
         }
 
+        $alreadyExists = $karandash->exists($address);
+
         if (
             $descr === ''
-            && $returnModule !== 'karandash'
+            && !$alreadyExists
         ) {
             flash(
                 'error',
@@ -413,7 +415,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
         }
 
-        $alreadyExists = $karandash->exists($address);
 
         $karandash->save(
             $address,
@@ -662,12 +663,22 @@ if ($module === 'stat') {
         $houses = [];
         $apartments = [];
         $payments = $data['payments'] ?? [];
-
         $house = $selectedHouse;
         $personal = $data['personal'] ?? $selectedPersonal;
         $subscriber = $data['subscriber'] ?? '';
         $subscriberAddress = $data['address'] ?? '';
         $subscriberTariff = $data['tariff'] ?? '';
+
+        $subscriberKarandash = $subscriberAddress !== ''
+            ? $karandash->findByAddress($subscriberAddress)
+            : null;
+
+        $subscriberKarandashDescr = trim(
+            (string) ($subscriberKarandash['descr'] ?? '')
+        );
+
+        $subscriberOnKarandash = $subscriberKarandash !== null;
+
         $update = '';
     } elseif ($selectedHouse !== '') {
         $data = $subscribers->apartments($selectedHouse);

@@ -1173,3 +1173,102 @@ body.is-page-loading .app-shell {
         animation-duration: 1.5s;
     }
 }
+
+.apartment-card__karandash,
+.karandash-card__descr {
+    display: inline-block;
+    margin-top: 7px;
+    padding: 5px 8px;
+    color: #db2777;
+    background: #fef3c7;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+#karandash-modal textarea,
+#karandash-edit-modal textarea {
+    color: #db2777;
+    background: #fef3c7;
+    font-weight: 600;
+}
+
+#karandash-modal textarea::placeholder,
+#karandash-edit-modal textarea::placeholder {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+
+
+
+.house-card__karandash {
+    display: block;
+    width: fit-content;
+    margin-top: 7px;
+    padding: 5px 9px;
+    color: #db2777;
+    background: #fef3c7;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.house-card__karandash strong {
+    color: inherit;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.karandash-card--empty {
+    opacity: 0.45;
+    filter: grayscale(1);
+    background: #f1f5f9;
+}
+
+.karandash-card--empty:hover {
+    opacity: 0.65;
+}
+
+
+
+
+.auth-card,
+.login-card,
+.login-form,
+.auth-form {
+    margin: 20px;
+}
+
+
+
+.payments-heading__karandash {
+    display: block;
+    width: fit-content;
+    max-width: 620px;
+    margin-top: 10px;
+    padding: 7px 10px;
+    color: #db2777;
+    background: #fef3c7;
+    border: 0;
+    border-radius: 7px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
+
+.payments-heading__karandash:hover {
+    background: #fde68a;
+}
+
+.payments-heading__karandash:focus-visible {
+    outline: 3px solid rgba(219, 39, 119, 0.25);
+    outline-offset: 2px;
+}

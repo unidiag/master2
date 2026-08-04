@@ -297,19 +297,22 @@ final class SubscriberRepository
 
         $statement = $this->db->prepare(
             'SELECT
-                id,
-                personal,
-                account,
-                address,
-                period,
-                summ,
-                tarif_id,
-                tarif,
-                time,
-                `update`
-            FROM master_database
-            WHERE `update` = :update
-            ORDER BY address ASC, id ASC'
+                db.id,
+                db.personal,
+                db.account,
+                db.address,
+                db.period,
+                db.summ,
+                db.tarif_id,
+                db.tarif,
+                db.time,
+                db.`update`,
+                k.descr AS karandash_descr
+            FROM master_database AS db
+            LEFT JOIN master_karandash AS k
+                ON k.address = db.address
+            WHERE db.`update` = :update
+            ORDER BY db.address ASC, db.id ASC'
         );
 
         $statement->execute([
@@ -343,6 +346,7 @@ final class SubscriberRepository
                     'state_channels' => 0,
                     'analog_package' => 0,
                     'digital_package' => 0,
+                    'karandash' => 0,
                     'update' => $update,
                     'time' => '',
                 ];
@@ -352,6 +356,12 @@ final class SubscriberRepository
             $tariff = trim((string) ($row['tarif'] ?? ''));
 
             $houses[$house]['subscribers']++;
+
+            if (
+                trim((string) ($row['karandash_descr'] ?? '')) !== ''
+            ) {
+                $houses[$house]['karandash']++;
+            }
 
             if ($tariff !== 'Нет договора') {
                 if ($sumRaw > 0) {
@@ -430,18 +440,21 @@ final class SubscriberRepository
 
         $statement = $this->db->prepare(
             'SELECT
-                id,
-                personal,
-                account,
-                address,
-                summ,
-                tarif,
-                time,
-                `update`
-            FROM master_database
-            WHERE `update` = :update
-            AND address LIKE :address
-            ORDER BY id ASC'
+                db.id,
+                db.personal,
+                db.account,
+                db.address,
+                db.summ,
+                db.tarif,
+                db.time,
+                db.`update`,
+                COALESCE(k.descr, \'\') AS karandash_descr
+            FROM master_database AS db
+            LEFT JOIN master_karandash AS k
+                ON k.address = db.address
+            WHERE db.`update` = :update
+            AND db.address LIKE :address
+            ORDER BY db.id ASC'
         );
 
         $statement->execute([
@@ -484,6 +497,9 @@ final class SubscriberRepository
                 'tariff' => $tariff,
                 'debt' => $debt,
                 'address' => $address,
+                'karandash_descr' => trim(
+                    (string) ($row['karandash_descr'] ?? '')
+                ),
             ];
         }
 
@@ -990,6 +1006,29 @@ final class KarandashRepository
         ]);
 
         return $statement->fetchColumn() !== false;
+    }
+
+    public function findByAddress(string $address): ?array
+    {
+        $statement = $this->db->prepare(
+            'SELECT
+                id,
+                address,
+                descr,
+                `time`,
+                `update`
+            FROM master_karandash
+            WHERE address = :address
+            LIMIT 1'
+        );
+
+        $statement->execute([
+            'address' => $address,
+        ]);
+
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: null;
     }
 
     public function groupedByHouse(): array
