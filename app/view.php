@@ -193,9 +193,90 @@ declare(strict_types=1);
         <?php elseif ($module === 'database'): ?>
             <?php if ($action === 'history'): ?><a class="button" href="<?= e(url(['module'=>'database'])) ?>">← Назад</a><h1>История лицевого счёта <?= e(get_string('personal',10)) ?></h1><?php endif; ?>
             <div class="subscriber-list">
-            <?php foreach ($data['rows'] as $row): ?>
-                <article class="subscriber-card"><div><strong><?= e($row['account']) ?></strong><div class="muted"><?= e($row['address']) ?></div></div><div><span class="label">Лицевой счёт</span><a href="<?= e(url(['module'=>'database','action'=>'history','personal'=>$row['personal']])) ?>"><?= e($row['personal']) ?></a></div><div><span class="label">Тариф</span><?= e($row['tarif']) ?></div><div><span class="label">Сумма</span><?= e(is_numeric($row['summ']) ? number_format(((float)$row['summ'])/10000, 2, ',', ' ') : $row['summ']) ?></div><div><span class="label">Обновление</span><?= e(format_unix_time($row['update'])) ?></div></article>
-            <?php endforeach; ?></div>
+                <?php foreach ($data['rows'] as $row): ?>
+                    <?php
+                    $address = trim(
+                        (string) ($row['address'] ?? '')
+                    );
+
+                    $addressParts = explode('-', $address);
+
+                    if (count($addressParts) >= 3) {
+                        array_pop($addressParts);
+
+                        $subscriberHouse = implode(
+                            '-',
+                            $addressParts
+                        );
+                    } else {
+                        $subscriberHouse = $address;
+                    }
+
+                    $tariff = trim(
+                        (string) ($row['tarif'] ?? '')
+                    );
+
+                    $subscriberCardClass = str_contains(
+                        mb_strtolower($tariff, 'UTF-8'),
+                        'государствен'
+                    )
+                        ? ' subscriber-card--state-package'
+                        : '';
+
+                    ?>
+
+                    <a
+                        class="subscriber-card subscriber-card--link<?= $subscriberCardClass ?>"
+                        href="<?= e(url([
+                            'module' => 'stat',
+                            'house' => $subscriberHouse,
+                            'personal' => (string) ($row['personal'] ?? ''),
+                        ])) ?>"
+                    >
+                        <div>
+                            <strong>
+                                <?= e((string) ($row['account'] ?? '')) ?>
+                            </strong>
+
+                            <div class="muted">
+                                <?= e($address) ?>
+                            </div>
+                        </div>
+
+                        <div>
+                            <span class="label">Лицевой счёт</span>
+                            <?= e((string) ($row['personal'] ?? '')) ?>
+                        </div>
+
+                        <div>
+                            <span class="label">Тариф</span>
+                            <?= e((string) ($row['tarif'] ?? '')) ?>
+                        </div>
+
+                        <div>
+                            <span class="label">Сумма</span>
+
+                            <?= e(
+                                is_numeric($row['summ'] ?? null)
+                                    ? number_format(
+                                        ((float) $row['summ']) / 10000,
+                                        2,
+                                        ',',
+                                        ' '
+                                    )
+                                    : (string) ($row['summ'] ?? '')
+                            ) ?>
+                        </div>
+
+                        <div>
+                            <span class="label">Обновление</span>
+
+                            <?= e(format_unix_time(
+                                (string) ($row['update'] ?? '')
+                            )) ?>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
 
 
 <?php elseif ($module === 'karandash'): ?>
