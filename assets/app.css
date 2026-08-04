@@ -892,3 +892,157 @@
         width: 100%;
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.payments-heading__actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.payments-heading__actions form {
+    margin: 0;
+}
+
+.karandash-address {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--surface-muted, #f1f5f9);
+}
+
+.karandash-address small {
+    color: var(--muted, #64748b);
+}
+
+.karandash-address strong {
+    overflow-wrap: anywhere;
+}
+
+#karandash-modal textarea {
+    min-height: 130px;
+    resize: vertical;
+}
+
+.karandash-houses {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.karandash-house {
+    overflow: hidden;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 16px;
+    background: var(--surface, #ffffff);
+}
+
+.karandash-house__heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 18px;
+    color: inherit;
+    text-decoration: none;
+    background: var(--surface-muted, #f8fafc);
+}
+
+.karandash-house__heading:hover {
+    background: #f1f5f9;
+}
+
+.karandash-house__heading h2 {
+    margin: 0 0 4px;
+    font-size: 18px;
+}
+
+.karandash-house__heading span {
+    color: var(--muted, #64748b);
+}
+
+.karandash-list {
+    display: grid;
+    grid-template-columns: repeat(
+        auto-fill,
+        minmax(280px, 1fr)
+    );
+    gap: 1px;
+    background: var(--border, #e2e8f0);
+}
+
+.karandash-card {
+    min-width: 0;
+    padding: 16px 18px;
+    background: var(--surface, #ffffff);
+}
+
+.karandash-card__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.karandash-card__head strong {
+    font-size: 17px;
+}
+
+.karandash-card__head time {
+    flex: none;
+    color: var(--muted, #64748b);
+    font-size: 12px;
+}
+
+.karandash-card__address {
+    margin-top: 5px;
+    color: var(--muted, #64748b);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.karandash-card p {
+    margin: 14px 0 0;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.karandash-card__created {
+    margin-top: 14px;
+    color: var(--muted, #64748b);
+    font-size: 12px;
+}
+
+@media (max-width: 720px) {
+    .payments-heading__actions {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .payments-heading__actions > button,
+    .payments-heading__actions form,
+    .payments-heading__actions form button {
+        flex: 1;
+    }
+
+    .karandash-list {
+        grid-template-columns: 1fr;
+    }
+}

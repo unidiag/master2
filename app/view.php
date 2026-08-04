@@ -43,7 +43,18 @@ declare(strict_types=1);
 <div class="app-shell">
     <aside class="sidebar" data-sidebar>
         <nav>
-            <?php foreach ([['zayavki','Заявки','☑'],['podkluchki','Подключения','🔌'],['database','Абоненты','👥'],['stat','Статистика','▦'],['debtors', 'Должники', '₽']] as [$key,$label,$icon]): ?>
+            <?php
+                $navigation = [
+                    ['zayavki', 'Заявки', '☑'],
+                    ['podkluchki', 'Подключения', '🔌'],
+                    ['database', 'Абоненты', '👥'],
+                    ['stat', 'Статистика', '▦'],
+                    ['debtors', 'Должники', '₽'],
+                    ['karandash', 'Карандаш', '✎'],
+                ];
+            ?>
+
+            <?php foreach ($navigation as [$key, $label, $icon]): ?>
                 <a class="nav-item <?= $module === $key ? 'active' : '' ?>" href="<?= e(url(['module' => $key])) ?>"><span><?= $icon ?></span><?= e($label) ?></a>
             <?php endforeach; ?>
         </nav>
@@ -171,6 +182,152 @@ declare(strict_types=1);
             <?php foreach ($data['rows'] as $row): ?>
                 <article class="subscriber-card"><div><strong><?= e($row['account']) ?></strong><div class="muted"><?= e($row['address']) ?></div></div><div><span class="label">Лицевой счёт</span><a href="<?= e(url(['module'=>'database','action'=>'history','personal'=>$row['personal']])) ?>"><?= e($row['personal']) ?></a></div><div><span class="label">Тариф</span><?= e($row['tarif']) ?></div><div><span class="label">Сумма</span><?= e(is_numeric($row['summ']) ? number_format(((float)$row['summ'])/10000, 2, ',', ' ') : $row['summ']) ?></div><div><span class="label">Обновление</span><?= e(format_unix_time($row['update'])) ?></div></article>
             <?php endforeach; ?></div>
+
+
+<?php elseif ($module === 'karandash'): ?>
+    <section class="karandash-page">
+        <div class="page-heading">
+            <div>
+                <h1>Карандаш</h1>
+
+                <div class="page-heading__counter">
+                    <?= e(number_format(
+                        (int) ($data['total'] ?? 0),
+                        0,
+                        ',',
+                        ' '
+                    )) ?>
+                    записей
+                </div>
+            </div>
+        </div>
+
+        <?php
+        $karandashHouses = $data['houses'] ?? [];
+        ?>
+
+        <?php if (!$karandashHouses): ?>
+            <div class="empty-state">
+                <strong>На карандаше никого нет</strong>
+                <span>
+                    Записи появятся после добавления абонентов
+                    из раздела статистики.
+                </span>
+            </div>
+        <?php else: ?>
+            <div class="karandash-houses">
+                <?php foreach ($karandashHouses as $houseData): ?>
+                    <?php
+                    $houseName = (string) (
+                        $houseData['house'] ?? ''
+                    );
+
+                    $items = $houseData['items'] ?? [];
+                    ?>
+
+                    <section class="karandash-house">
+                        <a
+                            class="karandash-house__heading"
+                            href="<?= e(url([
+                                'module' => 'stat',
+                                'house' => $houseName,
+                            ])) ?>"
+                        >
+                            <div>
+                                <h2><?= e($houseName) ?></h2>
+
+                                <span>
+                                    <?= e(number_format(
+                                        count($items),
+                                        0,
+                                        ',',
+                                        ' '
+                                    )) ?>
+                                    записей
+                                </span>
+                            </div>
+
+                            <span>→</span>
+                        </a>
+
+                        <div class="karandash-list">
+                            <?php foreach ($items as $item): ?>
+                                <article class="karandash-card">
+                                    <div class="karandash-card__head">
+                                        <strong>
+                                            <?php if (
+                                                (string) (
+                                                    $item['apartment'] ?? ''
+                                                ) !== ''
+                                            ): ?>
+                                                кв.
+                                                <?= e(
+                                                    (string) $item['apartment']
+                                                ) ?>
+                                            <?php else: ?>
+                                                <?= e(
+                                                    (string) (
+                                                        $item['address'] ?? ''
+                                                    )
+                                                ) ?>
+                                            <?php endif; ?>
+                                        </strong>
+
+                                        <time
+                                            datetime="<?= e(date(
+                                                DATE_ATOM,
+                                                (int) (
+                                                    $item['update'] ?? 0
+                                                )
+                                            )) ?>"
+                                        >
+                                            <?= e(format_unix_time(
+                                                (string) (
+                                                    $item['update'] ?? ''
+                                                ),
+                                                'd.m.Y H:i'
+                                            )) ?>
+                                        </time>
+                                    </div>
+
+                                    <div class="karandash-card__address">
+                                        <?= e(
+                                            (string) (
+                                                $item['address'] ?? ''
+                                            )
+                                        ) ?>
+                                    </div>
+
+                                    <p>
+                                        <?= nl2br(e(
+                                            (string) (
+                                                $item['descr'] ?? ''
+                                            )
+                                        )) ?>
+                                    </p>
+
+                                    <?php if (
+                                        (string) ($item['time'] ?? '')
+                                        !==
+                                        (string) ($item['update'] ?? '')
+                                    ): ?>
+                                        <div class="karandash-card__created">
+                                            Добавлено:
+                                            <?= e(format_unix_time(
+                                                (string) (
+                                                    $item['time'] ?? ''
+                                                ),
+                                                'd.m.Y H:i'
+                                            )) ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </article>
+                            <?php endforeach; ?>
+                        </div>
+                    </section>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
 
             
 
@@ -556,35 +713,14 @@ elseif ($module === 'stat'): ?>
 <?php if ($module === 'stat' && $personal !== ''): ?>
 
     <section class="payments-page">
-        <div class="page-heading payments-heading">
-            <div>
-                <a
-                    class="apartments-heading__back"
-                    href="<?= e(url([
-                        'module' => 'stat',
-                        'house' => $house,
-                    ])) ?>"
-                >
-                    ← Квартиры дома
-                </a>
-
-                <h1>
-                    <?= e($subscriber !== '' ? $subscriber : 'Абонент') ?>
-                </h1>
-
-                <div class="page-heading__counter">
-                    <?= e($subscriberAddress) ?>
-                </div>
-
-                <div class="payments-heading__meta">
-                    Лицевой счёт:
-                    <strong><?= e($personal) ?></strong>
-
-                    <?php if ($subscriberTariff !== ''): ?>
-                        · <?= e($subscriberTariff) ?>
-                    <?php endif; ?>
-                </div>
-            </div>
+        <div class="payments-heading__actions">
+            <button
+                class="button"
+                type="button"
+                data-modal-open="karandash-modal"
+            >
+                ✎ Взять на карандаш
+            </button>
 
             <form
                 method="post"
@@ -1111,5 +1247,85 @@ document.addEventListener('DOMContentLoaded', function () {
 <?php if (in_array($module,['zayavki','podkluchki'],true)): ?>
 <dialog class="modal" id="create-modal"><form method="post"><div class="modal-head"><h2><?= $module==='zayavki'?'Новая заявка':'Новое подключение' ?></h2><button type="button" class="icon-button" data-modal-close>×</button></div><input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="create"><label>Абонент<input class="input" name="abonent" maxlength="50" required autocomplete="name"></label><?php if($module==='zayavki'): ?><label>Дополнительное имя<input class="input" name="abonent_ajax" maxlength="50"></label><?php endif; ?><label>Адрес<input class="input" name="address" maxlength="50" required autocomplete="street-address"></label><?php if($module==='zayavki'): ?><label>Дополнительный адрес<input class="input" name="address_ajax" maxlength="50"></label><?php endif; ?><label>Описание<input class="input" name="description" maxlength="50" required></label><label>Дополнительно<input class="input" name="other" maxlength="50"></label><?php if($module==='zayavki'): ?><label>Стоимость<input class="input" name="cost" maxlength="10" inputmode="decimal"></label><?php endif; ?><button class="button primary full" type="submit">Сохранить</button></form></dialog>
 <dialog class="modal" id="complete-modal"><form method="post"><div class="modal-head"><h2>Завершение</h2><button type="button" class="icon-button" data-modal-close>×</button></div><input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="complete"><input type="hidden" name="id" id="complete-id"><label>Мастер<input class="input" name="master" maxlength="50" required></label><label>Результат<input class="input" name="result" maxlength="50" required></label><label id="cost-field">Стоимость<input class="input" name="cost" maxlength="10" inputmode="decimal"></label><button class="button primary full" type="submit">Сохранить</button></form></dialog>
+<?php if ($module === 'stat' && $personal !== ''): ?>
+    <dialog class="modal" id="karandash-modal">
+        <form method="post">
+            <div class="modal-head">
+                <h2>Взять на карандаш</h2>
+
+                <button
+                    type="button"
+                    class="icon-button"
+                    data-modal-close
+                >
+                    ×
+                </button>
+            </div>
+
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="<?= e(csrf_token()) ?>"
+            >
+
+            <input
+                type="hidden"
+                name="action"
+                value="karandash_add"
+            >
+
+            <input
+                type="hidden"
+                name="house"
+                value="<?= e($house) ?>"
+            >
+
+            <input
+                type="hidden"
+                name="personal"
+                value="<?= e($personal) ?>"
+            >
+
+            <input
+                type="hidden"
+                name="address"
+                value="<?= e($subscriberAddress) ?>"
+            >
+
+            <div class="karandash-address">
+                <small>Адрес</small>
+                <strong>
+                    <?= e(
+                        $subscriberAddress !== ''
+                            ? $subscriberAddress
+                            : 'Адрес не определён'
+                    ) ?>
+                </strong>
+            </div>
+
+            <label>
+                Причина
+
+                <textarea
+                    class="input"
+                    name="descr"
+                    rows="6"
+                    maxlength="2000"
+                    required
+                    autofocus
+                    placeholder="Почему абонент взят на карандаш"
+                ></textarea>
+            </label>
+
+            <button
+                class="button primary full"
+                type="submit"
+                <?= $subscriberAddress === '' ? 'disabled' : '' ?>
+            >
+                Сохранить
+            </button>
+        </form>
+    </dialog>
+<?php endif; ?>
 <?php endif; ?>
 </body></html>

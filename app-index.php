@@ -38,6 +38,7 @@ $status = in_array(($_GET['status'] ?? 'all'), ['all', 'open', 'done'], true)
 $tickets = new TicketRepository($pdo);
 $connections = new ConnectionRepository($pdo);
 $subscribers = new SubscriberRepository($pdo);
+$karandash = new KarandashRepository($pdo);
 
 
 
@@ -363,6 +364,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $postAction = post_string('action', 30);
     $id = positive_int($_POST['id'] ?? 0, 0);
 
+
+
+
+    if ($postAction === 'karandash_add') {
+        verify_csrf();
+
+        $personal = post_string('personal', 20);
+        $house = post_string('house', 100);
+        $address = post_string('address', 255);
+        $descr = post_string('descr', 2000);
+
+        if ($address === '') {
+            flash(
+                'error',
+                'Не удалось определить адрес абонента.'
+            );
+
+            redirect([
+                'module' => 'stat',
+                'house' => $house,
+                'personal' => $personal,
+            ]);
+        }
+
+        if ($descr === '') {
+            flash(
+                'error',
+                'Укажите причину постановки на карандаш.'
+            );
+
+            redirect([
+                'module' => 'stat',
+                'house' => $house,
+                'personal' => $personal,
+            ]);
+        }
+
+        $alreadyExists = $karandash->exists($address);
+
+        $karandash->save(
+            $address,
+            $descr
+        );
+
+        flash(
+            'success',
+            $alreadyExists
+                ? 'Информация на карандаше обновлена.'
+                : 'Абонент взят на карандаш.'
+        );
+
+        redirect([
+            'module' => 'stat',
+            'house' => $house,
+            'personal' => $personal,
+        ]);
+    }
+
+
+
     if ($module === 'zayavki') {
         if ($postAction === 'create') {
             $tickets->create([
@@ -562,6 +623,7 @@ $titles = [
     'database' => 'Абоненты',
     'stat' => 'Статистика',
     'debtors' => 'Должники',
+    'karandash' => 'Карандаш',
 ];
 
 $title = isset($titles[$module]) ? $titles[$module] : 'Заявки';
@@ -613,6 +675,13 @@ if ($module === 'stat') {
 if ($module === 'debtors') {
     $data = $subscribers->debtors();
 }
+
+if ($module === 'karandash') {
+    $data = $karandash->groupedByHouse();
+}
+
+
+
 
 $flashes = consume_flashes();
 require __DIR__ . '/app/view.php';

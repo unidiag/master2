@@ -164,8 +164,39 @@ final class SubscriberRepository
 
 
 
+    public function cleanupOlderThanOneYear(
+        int $batchSize = 5000
+    ): int {
+        $cutoff = (new DateTimeImmutable('now'))
+            ->modify('-1 year')
+            ->getTimestamp();
 
-    
+        $batchSize = max(100, min(50000, $batchSize));
+        $deletedTotal = 0;
+
+        do {
+            $statement = $this->db->prepare(
+                "DELETE FROM master_database
+                WHERE `update` REGEXP '^[0-9]+$'
+                AND CAST(`update` AS UNSIGNED) < :cutoff
+                LIMIT {$batchSize}"
+            );
+
+            $statement->bindValue(
+                ':cutoff',
+                $cutoff,
+                PDO::PARAM_INT
+            );
+
+            $statement->execute();
+
+            $deleted = $statement->rowCount();
+            $deletedTotal += $deleted;
+        } while ($deleted === $batchSize);
+
+        return $deletedTotal;
+    }
+        
 
     public function list(string $search, int $limit, int $offset): array
     {
@@ -896,4 +927,167 @@ public function debtors(): array
 
 
 
+}
+
+
+// ██╗  ██╗ █████╗ ██████╗  █████╗ ███╗   ██╗██████╗  █████╗ ███████╗██╗  ██╗
+// ██║ ██╔╝██╔══██╗██╔══██╗██╔══██╗████╗  ██║██╔══██╗██╔══██╗██╔════╝██║  ██║
+// █████╔╝ ███████║██████╔╝███████║██╔██╗ ██║██║  ██║███████║███████╗███████║
+// ██╔═██╗ ██╔══██║██╔══██╗██╔══██║██║╚██╗██║██║  ██║██╔══██║╚════██║██╔══██║
+// ██║  ██╗██║  ██║██║  ██║██║  ██║██║ ╚████║██████╔╝██║  ██║███████║██║  ██║
+// ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
+                                                                          
+
+final class KarandashRepository
+{
+    private PDO $db;
+
+    public function __construct(PDO $db)
+    {
+        $this->db = $db;
+    }
+
+    public function save(string $address, string $descr): void
+    {
+        $timestamp = time();
+
+        $statement = $this->db->prepare(
+            'INSERT INTO master_karandash (
+                address,
+                descr,
+                `time`,
+                `update`
+            ) VALUES (
+                :address,
+                :descr,
+                :time,
+                :update
+            )
+            ON DUPLICATE KEY UPDATE
+                descr = VALUES(descr),
+                `update` = VALUES(`update`)'
+        );
+
+        $statement->execute([
+            'address' => $address,
+            'descr' => $descr,
+            'time' => $timestamp,
+            'update' => $timestamp,
+        ]);
+    }
+
+    public function exists(string $address): bool
+    {
+        $statement = $this->db->prepare(
+            'SELECT 1
+             FROM master_karandash
+             WHERE address = :address
+             LIMIT 1'
+        );
+
+        $statement->execute([
+            'address' => $address,
+        ]);
+
+        return $statement->fetchColumn() !== false;
+    }
+
+    public function groupedByHouse(): array
+    {
+        $statement = $this->db->query(
+            'SELECT
+                id,
+                address,
+                descr,
+                `time`,
+                `update`
+             FROM master_karandash
+             ORDER BY address ASC, `update` DESC, id DESC'
+        );
+
+        $houses = [];
+        $total = 0;
+
+        while ($row = $statement->fetch(PDO::FETCH_ASSOC)) {
+            $address = trim(
+                (string) ($row['address'] ?? '')
+            );
+
+            if ($address === '') {
+                continue;
+            }
+
+            $house = $this->extractHouse($address);
+
+            if (!isset($houses[$house])) {
+                $houses[$house] = [
+                    'house' => $house,
+                    'items' => [],
+                ];
+            }
+
+            $row['apartment'] = $this->extractApartment($address);
+
+            $houses[$house]['items'][] = $row;
+            $total++;
+        }
+
+        uksort($houses, 'strnatcasecmp');
+
+        foreach ($houses as &$house) {
+            usort(
+                $house['items'],
+                static function (array $a, array $b): int {
+                    $apartmentA = (string) (
+                        $a['apartment'] ?? ''
+                    );
+
+                    $apartmentB = (string) (
+                        $b['apartment'] ?? ''
+                    );
+
+                    return strnatcasecmp(
+                        $apartmentA,
+                        $apartmentB
+                    );
+                }
+            );
+        }
+
+        unset($house);
+
+        return [
+            'houses' => array_values($houses),
+            'total' => $total,
+        ];
+    }
+
+    private function extractHouse(string $address): string
+    {
+        $parts = explode('-', trim($address));
+
+        if (count($parts) < 3) {
+            return trim($address);
+        }
+
+        array_pop($parts);
+
+        return trim(
+            implode('-', $parts),
+            " \t\n\r\0\x0B-"
+        );
+    }
+
+    private function extractApartment(string $address): string
+    {
+        $parts = explode('-', trim($address));
+
+        if (count($parts) < 3) {
+            return '';
+        }
+
+        return trim(
+            (string) array_pop($parts)
+        );
+    }
 }
