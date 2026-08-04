@@ -712,7 +712,46 @@ document.addEventListener('DOMContentLoaded', function () {
 elseif ($module === 'stat'): ?>
 <?php if ($module === 'stat' && $personal !== ''): ?>
 
-    <section class="payments-page">
+
+
+
+<section class="payments-page">
+    <div class="page-heading payments-heading">
+        <div>
+            <a
+                class="apartments-heading__back"
+                href="<?= e(url([
+                    'module' => 'stat',
+                    'house' => $house,
+                ])) ?>"
+            >
+                ← Квартиры дома
+            </a>
+
+            <h1>
+                <?= e(
+                    $subscriber !== ''
+                        ? $subscriber
+                        : 'Абонент'
+                ) ?>
+            </h1>
+
+            <?php if ($subscriberAddress !== ''): ?>
+                <div class="page-heading__counter">
+                    <?= e($subscriberAddress) ?>
+                </div>
+            <?php endif; ?>
+
+            <div class="payments-heading__meta">
+                Лицевой счёт:
+                <strong><?= e($personal) ?></strong>
+
+                <?php if ($subscriberTariff !== ''): ?>
+                    · <?= e($subscriberTariff) ?>
+                <?php endif; ?>
+            </div>
+        </div>
+
         <div class="payments-heading__actions">
             <button
                 class="button"
@@ -761,6 +800,9 @@ elseif ($module === 'stat'): ?>
                 </button>
             </form>
         </div>
+    </div>
+
+
 
 
         
