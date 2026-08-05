@@ -65,7 +65,31 @@ $cssVersion = is_file($cssFile)
     <button class="icon-button menu-button" type="button" data-menu-toggle aria-label="Открыть меню">☰</button>
     <a class="brand" href="<?= e(url(['module' => 'zayavki'])) ?>">Master2</a>
     <div class="topbar-title"><?= e($title) ?></div>
-    <div class="user-badge"><?= e(current_user()) ?></div>
+    <form
+        method="post"
+        class="user-badge user-badge--logout"
+    >
+        <input
+            type="hidden"
+            name="csrf_token"
+            value="<?= e(csrf_token()) ?>"
+        >
+
+        <input
+            type="hidden"
+            name="auth_action"
+            value="logout"
+        >
+
+        <button
+            type="submit"
+            class="user-badge__button"
+            title="Выйти"
+            aria-label="Выйти из системы"
+        >
+            <?= e(current_user()) ?>
+        </button>
+    </form>
 </header>
 <div class="app-shell">
     <aside class="sidebar" data-sidebar>
@@ -700,6 +724,9 @@ $cssVersion = is_file($cssFile)
                             $lastPaymentUpdate = trim(
                                 (string) ($debtor['last_payment_update'] ?? '')
                             );
+                            $karandashDescr = trim(
+                                (string) ($debtor['karandash_descr'] ?? '')
+                            );
 
                             ?>
 
@@ -744,6 +771,21 @@ $cssVersion = is_file($cssFile)
                                             не обнаружена
                                         <?php endif; ?>
                                     </small>
+
+                                    <?php if ($karandashDescr !== ''): ?>
+                                        <span
+                                            class="debtor-card__karandash"
+                                            title="<?= e($karandashDescr) ?>"
+                                        >
+                                            <span class="debtor-card__karandash-icon">
+                                                ✎
+                                            </span>
+
+                                            <span class="debtor-card__karandash-text">
+                                                <?= nl2br(e($karandashDescr)) ?>
+                                            </span>
+                                        </span>
+                                    <?php endif; ?>
                                 </div>
 
                                 <strong class="debtor-card__debt">

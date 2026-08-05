@@ -668,11 +668,7 @@ if ($module === 'stat') {
         $subscriber = $data['subscriber'] ?? '';
         $subscriberAddress = $data['address'] ?? '';
         $subscriberTariff = $data['tariff'] ?? '';
-
-        $subscriberDebt = (float) (
-            $subscriberRow['debt']
-            ?? 0
-        );
+        $subscriberDebt = (float) ($data['debt'] ?? 0);
 
         $subscriberKarandash = $subscriberAddress !== ''
             ? $karandash->findByAddress($subscriberAddress)

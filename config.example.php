@@ -21,6 +21,7 @@ return [
     // Создать: php -r "echo password_hash('пароль', PASSWORD_DEFAULT), PHP_EOL;"
     'auth' => [
         'enabled' => true,
+        'remember_days' => 30,
 
         'users' => [
             'admin' => [

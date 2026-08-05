@@ -592,6 +592,9 @@ final class SubscriberRepository
         }
 
         $lastRow = $rows ? $rows[count($rows) - 1] : [];
+        $currentDebtRaw = $lastRow
+            ? $this->parseLegacySum($lastRow['summ'] ?? '')
+            : 0;
 
         /*
         * Новые оплаты сверху.
@@ -603,6 +606,8 @@ final class SubscriberRepository
             'subscriber' => trim((string) ($lastRow['account'] ?? '')),
             'address' => trim((string) ($lastRow['address'] ?? '')),
             'tariff' => trim((string) ($lastRow['tarif'] ?? '')),
+            'debt' => max(0, $currentDebtRaw) / 10000,
+            'balance' => $currentDebtRaw / 10000,
             'payments' => $payments,
             'history' => $history,
         ];
@@ -734,17 +739,20 @@ public function debtors(): array
 
     $statement = $this->db->prepare(
         'SELECT
-            id,
-            personal,
-            account,
-            address,
-            summ,
-            tarif,
-            `update`
-        FROM master_database
-        WHERE `update` = :update
-          AND tarif <> :no_contract
-        ORDER BY id ASC'
+            db.id,
+            db.personal,
+            db.account,
+            db.address,
+            db.summ,
+            db.tarif,
+            db.`update`,
+            COALESCE(k.descr, \'\') AS karandash_descr
+        FROM master_database AS db
+        LEFT JOIN master_karandash AS k
+            ON k.address = db.address
+        WHERE db.`update` = :update
+        AND db.tarif <> :no_contract
+        ORDER BY db.id ASC'
     );
 
     $statement->execute([
@@ -821,6 +829,9 @@ public function debtors(): array
             ),
             'debt' => $sumRaw / 10000,
             'last_payment_update' => '',
+            'karandash_descr' => trim(
+                (string) ($row['karandash_descr'] ?? '')
+            ),
         ];
 
         $debtorsTotal++;

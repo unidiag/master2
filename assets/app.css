@@ -1385,3 +1385,81 @@ body.is-page-loading .app-shell {
     color: #166534;
     background: #dcfce7;
 }
+
+
+.debtor-card__karandash {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 6px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: #fef3c7;
+    color: #db2777;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.debtor-card__karandash-icon {
+    flex: 0 0 auto;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.debtor-card__karandash-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+
+
+
+
+.auth-remember {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: fit-content;
+    cursor: pointer;
+    user-select: none;
+}
+
+.auth-remember input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--primary, #2563eb);
+    cursor: pointer;
+}
+
+.auth-remember span {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+
+.user-badge--logout {
+    margin: 0;
+}
+
+.user-badge__button {
+    display: block;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: inherit;
+    cursor: pointer;
+}
+
+.user-badge__button:hover {
+    text-decoration: underline;
+}
+
+.user-badge__button:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+    border-radius: 4px;
+}

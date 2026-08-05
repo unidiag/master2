@@ -122,7 +122,64 @@ function current_user(): string
 // ██╔══██║██║   ██║   ██║   ██╔══██║
 // ██║  ██║╚██████╔╝   ██║   ██║  ██║
 // ╚═╝  ╚═╝ ╚═════╝    ╚═╝   ╚═╝  ╚═╝
-                                  
+
+function auth_session_cookie_options(int $expires = 0): array
+{
+    return [
+        'expires' => $expires,
+        'path' => '/',
+        'secure' => !empty($_SERVER['HTTPS'])
+            && $_SERVER['HTTPS'] !== 'off',
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ];
+}
+
+function refresh_auth_session_cookie(int $rememberDays): void
+{
+    if (
+        session_status() !== PHP_SESSION_ACTIVE
+        || empty($_SESSION['auth_remember'])
+    ) {
+        return;
+    }
+
+    $expires = time() + ($rememberDays * 86400);
+
+    setcookie(
+        session_name(),
+        session_id(),
+        auth_session_cookie_options($expires)
+    );
+}
+
+
+function logout_user(): void
+{
+    $_SESSION = [];
+
+    if (ini_get('session.use_cookies')) {
+        $cookie = session_get_cookie_params();
+
+        setcookie(
+            session_name(),
+            '',
+            [
+                'expires' => time() - 3600,
+                'path' => $cookie['path'] ?: '/',
+                'domain' => $cookie['domain'] ?: '',
+                'secure' => (bool) $cookie['secure'],
+                'httponly' => (bool) $cookie['httponly'],
+                'samesite' => 'Lax',
+            ]
+        );
+    }
+
+    session_destroy();
+
+    redirect([]);
+}
+
 
 function require_auth(
     array $config,
@@ -133,11 +190,53 @@ function require_auth(
         return;
     }
 
+    $rememberDays = max(
+        1,
+        min(365, (int) ($config['remember_days'] ?? 30))
+    );
+
+    $rememberLifetime = $rememberDays * 86400;
+
+    /*
+    * Сервер должен хранить данные сессии не меньше,
+    * чем живёт cookie «Запомнить меня».
+    */
     if (session_status() !== PHP_SESSION_ACTIVE) {
+        ini_set(
+            'session.gc_maxlifetime',
+            (string) $rememberLifetime
+        );
+
+        ini_set('session.use_strict_mode', '1');
+        ini_set('session.cookie_httponly', '1');
+        ini_set('session.cookie_samesite', 'Lax');
+
+        if (
+            !empty($_SERVER['HTTPS'])
+            && $_SERVER['HTTPS'] !== 'off'
+        ) {
+            ini_set('session.cookie_secure', '1');
+        }
+
         session_start();
     }
 
+    /*
+    * Выход нужно обрабатывать до проверки текущей авторизации.
+    */
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $authAction = trim(
+            (string) ($_POST['auth_action'] ?? '')
+        );
+
+        if ($authAction === 'logout') {
+            verify_csrf();
+            logout_user();
+        }
+    }
+
     if (!empty($_SESSION['auth_username'])) {
+        refresh_auth_session_cookie($rememberDays);
         return;
     }
 
@@ -157,6 +256,9 @@ function require_auth(
                 $_POST['password'] ?? ''
             );
 
+            $remember = isset($_POST['remember'])
+                && (string) $_POST['remember'] === '1';
+
             $users = $config['users'] ?? [];
 
             $user = is_array($users)
@@ -175,6 +277,27 @@ function require_auth(
                 session_regenerate_id(true);
 
                 $_SESSION['auth_username'] = $username;
+                $_SESSION['auth_remember'] = $remember;
+
+                if ($remember) {
+                    setcookie(
+                        session_name(),
+                        session_id(),
+                        auth_session_cookie_options(
+                            time() + $rememberLifetime
+                        )
+                    );
+                } else {
+                    /*
+                    * Cookie без срока действия живёт только до
+                    * закрытия браузера.
+                    */
+                    setcookie(
+                        session_name(),
+                        session_id(),
+                        auth_session_cookie_options()
+                    );
+                }
 
                 /*
                  * Отправляем уведомление о входе.
@@ -323,6 +446,17 @@ function require_auth(
                         autocomplete="current-password"
                     >
                 </label>
+
+                <label class="auth-remember">
+                    <input
+                        type="checkbox"
+                        name="remember"
+                        value="1"
+                        <?= isset($_POST['remember']) ? 'checked' : '' ?>
+                    >
+
+                    <span>Запомнить меня</span>
+                </label>                
 
                 <button
                     class="button primary full"
