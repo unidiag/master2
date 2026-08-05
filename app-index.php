@@ -40,6 +40,37 @@ $connections = new ConnectionRepository($pdo);
 $subscribers = new SubscriberRepository($pdo);
 $karandash = new KarandashRepository($pdo);
 
+
+
+if (
+    $_SERVER['REQUEST_METHOD'] === 'GET'
+    && get_string('ajax', 30) === 'subscriber_search'
+) {
+    $query = get_string('query', 100);
+
+    header(
+        'Content-Type: application/json; charset=utf-8'
+    );
+
+    header('Cache-Control: no-store');
+
+    echo json_encode(
+        [
+            'items' => $subscribers->addressSuggestions(
+                $query,
+                10
+            ),
+        ],
+        JSON_UNESCAPED_UNICODE
+        | JSON_UNESCAPED_SLASHES
+        | JSON_THROW_ON_ERROR
+    );
+
+    exit;
+}
+
+
+
 $subscriberDebt = 0.0;
 
 
@@ -446,23 +477,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($module === 'zayavki') {
         if ($postAction === 'create') {
+            $allowedDescriptions = [
+                'нет трансляции',
+                'плохая трансляция',
+                'настройка каналов',
+                'ремонт квартирной сети',
+                'авария на линии',
+                'подключить на площадке',
+                'другие услуги',
+            ];
+
+            $address = post_string('address', 50);
+            $abonent = post_string('abonent', 50);
+            $description = post_string('description', 50);
+            $other = post_string('other', 50);
+
+            if ($address === '') {
+                flash(
+                    'error',
+                    'Укажите адрес абонента.'
+                );
+
+                redirect(['module' => 'zayavki']);
+            }
+
+            if ($abonent === '') {
+                flash(
+                    'error',
+                    'Укажите ФИО абонента.'
+                );
+
+                redirect(['module' => 'zayavki']);
+            }
+
+            if (
+                !in_array(
+                    $description,
+                    $allowedDescriptions,
+                    true
+                )
+            ) {
+                flash(
+                    'error',
+                    'Выберите описание заявки.'
+                );
+
+                redirect(['module' => 'zayavki']);
+            }
+
             $tickets->create([
-                'abonent' => post_string('abonent', 50),
-                'abonent_ajax' => post_string(
-                    'abonent_ajax',
-                    50
-                ),
-                'address' => post_string('address', 50),
-                'address_ajax' => post_string(
-                    'address_ajax',
-                    50
-                ),
-                'other' => post_string('other', 50),
-                'description' => post_string(
-                    'description',
-                    50
-                ),
-                'cost' => post_string('cost', 10),
+                'abonent' => $abonent,
+                'abonent_ajax' => '',
+                'address' => $address,
+                'address_ajax' => '',
+                'other' => $other,
+                'description' => $description,
+                'cost' => '',
                 'who' => current_user(),
             ]);
 

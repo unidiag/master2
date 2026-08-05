@@ -196,6 +196,110 @@ final class SubscriberRepository
 
         return $deletedTotal;
     }
+
+
+
+
+
+
+    public function addressSuggestions(
+        string $search,
+        int $limit = 10
+    ): array {
+        $search = trim($search);
+        $limit = max(1, min(10, $limit));
+
+        if (mb_strlen($search, 'UTF-8') < 2) {
+            return [];
+        }
+
+        $update = $this->latestUpdate();
+
+        if ($update === '') {
+            return [];
+        }
+
+        $statement = $this->db->prepare(
+            'SELECT
+                address,
+                account,
+                personal
+            FROM master_database
+            WHERE `update` = :update
+            AND address LIKE :search
+            AND TRIM(address) <> \'\'
+            ORDER BY
+                CASE
+                    WHEN address LIKE :prefix THEN 0
+                    ELSE 1
+                END,
+                address ASC,
+                id DESC
+            LIMIT :limit'
+        );
+
+        $statement->bindValue(
+            ':update',
+            $update,
+            PDO::PARAM_STR
+        );
+
+        $statement->bindValue(
+            ':search',
+            '%' . $search . '%',
+            PDO::PARAM_STR
+        );
+
+        $statement->bindValue(
+            ':prefix',
+            $search . '%',
+            PDO::PARAM_STR
+        );
+
+        $statement->bindValue(
+            ':limit',
+            $limit,
+            PDO::PARAM_INT
+        );
+
+        $statement->execute();
+
+        $result = [];
+        $seenAddresses = [];
+
+        while ($row = $statement->fetch(PDO::FETCH_ASSOC)) {
+            $address = trim(
+                (string) ($row['address'] ?? '')
+            );
+
+            if (
+                $address === ''
+                || isset($seenAddresses[$address])
+            ) {
+                continue;
+            }
+
+            $seenAddresses[$address] = true;
+
+            $result[] = [
+                'address' => $address,
+                'name' => trim(
+                    (string) ($row['account'] ?? '')
+                ),
+                'personal' => trim(
+                    (string) ($row['personal'] ?? '')
+                ),
+            ];
+
+            if (count($result) >= $limit) {
+                break;
+            }
+        }
+
+        return $result;
+    }
+
+
         
 
     public function list(string $search, int $limit, int $offset): array

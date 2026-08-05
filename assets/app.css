@@ -1463,3 +1463,119 @@ body.is-page-loading .app-shell {
     outline-offset: 3px;
     border-radius: 4px;
 }
+
+
+
+
+
+.create-modal {
+    width: min(620px, calc(100vw - 24px));
+}
+
+.ticket-create-form {
+    display: grid;
+    gap: 18px;
+}
+
+.ticket-create-form label {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.ticket-create-form label > span {
+    color: var(--muted, #64748b);
+    font-size: 13px;
+}
+
+.ticket-create-form__person {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 0.8fr)
+        minmax(0, 1.2fr);
+    gap: 8px;
+}
+
+.ticket-create-form__actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+.button-link {
+    border-color: transparent;
+    background: transparent;
+    color: var(--primary, #2563eb);
+}
+
+.button-link:hover {
+    background: rgba(37, 99, 235, 0.08);
+}
+
+.subscriber-autocomplete {
+    position: relative;
+}
+
+.subscriber-suggestions {
+    position: absolute;
+    z-index: 30;
+    top: 100%;
+    right: 0;
+    left: 0;
+    max-height: 330px;
+    margin-top: 4px;
+    overflow-y: auto;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow:
+        0 12px 30px rgba(15, 23, 42, 0.16);
+}
+
+.subscriber-suggestion {
+    display: grid;
+    gap: 3px;
+    width: 100%;
+    padding: 9px 11px;
+    border: 0;
+    border-bottom: 1px solid #e2e8f0;
+    background: transparent;
+    color: #0f172a;
+    text-align: left;
+    cursor: pointer;
+}
+
+.subscriber-suggestion:last-child {
+    border-bottom: 0;
+}
+
+.subscriber-suggestion:hover,
+.subscriber-suggestion.is-active {
+    background: #eff6ff;
+}
+
+.subscriber-suggestion strong {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.subscriber-suggestion span {
+    color: #64748b;
+    font-size: 12px;
+}
+
+@media (max-width: 600px) {
+    .ticket-create-form__person {
+        grid-template-columns: 1fr;
+    }
+
+    .ticket-create-form__actions {
+        justify-content: stretch;
+    }
+
+    .ticket-create-form__actions .button {
+        flex: 1;
+    }
+} 

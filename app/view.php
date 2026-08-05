@@ -46,7 +46,7 @@ $cssVersion = is_file($cssFile)
     rel="stylesheet"
     href="assets/app.css?v=<?= e((string) $cssVersion) ?>"
 >
-    <script src="assets/app.js?v=1" defer></script>
+    <script src="assets/app.js?v=<?= e((string) $cssVersion) ?>" defer></script>
 </head>
 <body>
 
@@ -1732,7 +1732,242 @@ document.addEventListener('DOMContentLoaded', function () {
 </div>
 
 <?php if (in_array($module,['zayavki','podkluchki'],true)): ?>
-<dialog class="modal" id="create-modal"><form method="post"><div class="modal-head"><h2><?= $module==='zayavki'?'Новая заявка':'Новое подключение' ?></h2><button type="button" class="icon-button" data-modal-close>×</button></div><input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="create"><label>Абонент<input class="input" name="abonent" maxlength="50" required autocomplete="name"></label><?php if($module==='zayavki'): ?><label>Дополнительное имя<input class="input" name="abonent_ajax" maxlength="50"></label><?php endif; ?><label>Адрес<input class="input" name="address" maxlength="50" required autocomplete="street-address"></label><?php if($module==='zayavki'): ?><label>Дополнительный адрес<input class="input" name="address_ajax" maxlength="50"></label><?php endif; ?><label>Описание<input class="input" name="description" maxlength="50" required></label><label>Дополнительно<input class="input" name="other" maxlength="50"></label><?php if($module==='zayavki'): ?><label>Стоимость<input class="input" name="cost" maxlength="10" inputmode="decimal"></label><?php endif; ?><button class="button primary full" type="submit">Сохранить</button></form></dialog>
+
+
+
+<dialog
+    class="modal create-modal"
+    id="create-modal"
+>
+    <?php if ($module === 'zayavki'): ?>
+        <form
+            method="post"
+            class="ticket-create-form"
+            data-ticket-create-form
+        >
+            <div class="modal-head">
+                <h2>Добавить новую заявку от абонента</h2>
+
+                <button
+                    type="button"
+                    class="icon-button"
+                    data-modal-close
+                    aria-label="Закрыть"
+                >
+                    ×
+                </button>
+            </div>
+
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="<?= e(csrf_token()) ?>"
+            >
+
+            <input
+                type="hidden"
+                name="action"
+                value="create"
+            >
+
+            <div class="ticket-create-form__person">
+                <label class="subscriber-autocomplete">
+                    <span>Адрес абонента</span>
+
+                    <input
+                        class="input"
+                        type="text"
+                        name="address"
+                        maxlength="50"
+                        required
+                        autocomplete="off"
+                        data-subscriber-address
+                        aria-autocomplete="list"
+                        aria-expanded="false"
+                        aria-controls="subscriber-suggestions"
+                    >
+
+                    <div
+                        class="subscriber-suggestions"
+                        id="subscriber-suggestions"
+                        data-subscriber-suggestions
+                        role="listbox"
+                        hidden
+                    ></div>
+                </label>
+
+                <label>
+                    <span>ФИО</span>
+
+                    <input
+                        class="input"
+                        type="text"
+                        name="abonent"
+                        maxlength="50"
+                        required
+                        autocomplete="name"
+                        data-subscriber-name
+                    >
+                </label>
+            </div>
+
+            <label>
+                <span>Описание заявки</span>
+
+                <select
+                    class="input select"
+                    name="description"
+                    required
+                >
+                    <option value="" selected disabled>
+                        Выберите описание
+                    </option>
+
+                    <option value="нет трансляции">
+                        нет трансляции
+                    </option>
+
+                    <option value="плохая трансляция">
+                        плохая трансляция
+                    </option>
+
+                    <option value="настройка каналов">
+                        настройка каналов
+                    </option>
+
+                    <option value="ремонт квартирной сети">
+                        ремонт квартирной сети
+                    </option>
+
+                    <option value="авария на линии">
+                        авария на линии
+                    </option>
+
+                    <option value="подключить на площадке">
+                        подключить на площадке
+                    </option>
+
+                    <option value="другие услуги">
+                        другие услуги
+                    </option>
+                </select>
+            </label>
+
+            <label>
+                <span>Примечание</span>
+
+                <input
+                    class="input"
+                    type="text"
+                    name="other"
+                    maxlength="50"
+                    autocomplete="off"
+                >
+            </label>
+
+            <div class="ticket-create-form__actions">
+                <button
+                    class="button primary"
+                    type="submit"
+                >
+                    Добавить
+                </button>
+
+                <button
+                    class="button button-link"
+                    type="button"
+                    data-modal-close
+                >
+                    Отмена
+                </button>
+            </div>
+        </form>
+    <?php else: ?>
+        <form method="post">
+            <div class="modal-head">
+                <h2>Новое подключение</h2>
+
+                <button
+                    type="button"
+                    class="icon-button"
+                    data-modal-close
+                    aria-label="Закрыть"
+                >
+                    ×
+                </button>
+            </div>
+
+            <input
+                type="hidden"
+                name="csrf_token"
+                value="<?= e(csrf_token()) ?>"
+            >
+
+            <input
+                type="hidden"
+                name="action"
+                value="create"
+            >
+
+            <label>
+                Абонент
+
+                <input
+                    class="input"
+                    name="abonent"
+                    maxlength="50"
+                    required
+                    autocomplete="name"
+                >
+            </label>
+
+            <label>
+                Адрес
+
+                <input
+                    class="input"
+                    name="address"
+                    maxlength="50"
+                    required
+                    autocomplete="street-address"
+                >
+            </label>
+
+            <label>
+                Описание
+
+                <input
+                    class="input"
+                    name="description"
+                    maxlength="50"
+                    required
+                >
+            </label>
+
+            <label>
+                Дополнительно
+
+                <input
+                    class="input"
+                    name="other"
+                    maxlength="50"
+                >
+            </label>
+
+            <button
+                class="button primary full"
+                type="submit"
+            >
+                Сохранить
+            </button>
+        </form>
+    <?php endif; ?>
+</dialog>
+
+
+
+
+
 <dialog class="modal" id="complete-modal"><form method="post"><div class="modal-head"><h2>Завершение</h2><button type="button" class="icon-button" data-modal-close>×</button></div><input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="complete"><input type="hidden" name="id" id="complete-id"><label>Мастер<input class="input" name="master" maxlength="50" required></label><label>Результат<input class="input" name="result" maxlength="50" required></label><label id="cost-field">Стоимость<input class="input" name="cost" maxlength="10" inputmode="decimal"></label><button class="button primary full" type="submit">Сохранить</button></form></dialog>
 <?php endif; ?>
 </body></html>
