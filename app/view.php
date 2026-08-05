@@ -22,7 +22,10 @@ declare(strict_types=1);
 /** @var string $subscriberTariff */
 /** @var string $subscriberOnKarandash */
 /** @var string $subscriberKarandashDescr */
-
+/** @var float $subscriberDebt */
+$subscriberDebt = isset($subscriberDebt)
+    ? (float) $subscriberDebt
+    : 0.0;
 
 ?>
 <!doctype html>
@@ -32,7 +35,17 @@ declare(strict_types=1);
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#0f172a">
     <title><?= e($title) ?> — <?= e($config['app']['name'] ?? 'Master') ?></title>
-    <link rel="stylesheet" href="assets/app.css?v=1">
+<?php
+$cssFile = __DIR__ . '/../assets/app.css';
+$cssVersion = is_file($cssFile)
+    ? filemtime($cssFile)
+    : time();
+?>
+
+<link
+    rel="stylesheet"
+    href="assets/app.css?v=<?= e((string) $cssVersion) ?>"
+>
     <script src="assets/app.js?v=1" defer></script>
 </head>
 <body>
@@ -961,6 +974,22 @@ elseif ($module === 'stat'): ?>
                 <?php endif; ?>
             </div>
 
+            <div class="<?= $subscriberDebt > 0
+                ? 'payments-heading__debt payments-heading__debt--positive'
+                : 'payments-heading__debt payments-heading__debt--clear'
+            ?>">
+                <span>Задолженность</span>
+
+                <strong>
+                    <?= e(number_format(
+                        $subscriberDebt,
+                        2,
+                        ',',
+                        ' '
+                    )) ?>
+                </strong>
+            </div>
+
             <?php if ($subscriberKarandashDescr !== ''): ?>
                 <button
                     class="payments-heading__karandash"
@@ -1232,6 +1261,7 @@ elseif ($module === 'stat'): ?>
                 $tariff = trim((string) ($apartment['tariff'] ?? ''));
                 $debt = (float) ($apartment['debt'] ?? 0);
 
+
                 $apartmentClass = '';
 
                 if ($tariff === 'Нет договора') {
@@ -1240,6 +1270,13 @@ elseif ($module === 'stat'): ?>
                     $apartmentClass = ' apartment-card--analog';
                 } elseif ($tariff === 'Цифровой пакет') {
                     $apartmentClass = ' apartment-card--digital';
+                } elseif (
+                    str_contains(
+                        mb_strtolower($tariff, 'UTF-8'),
+                        'государствен'
+                    )
+                ) {
+                    $apartmentClass = ' apartment-card--state-package';
                 }
                 ?>
 

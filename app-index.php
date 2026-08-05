@@ -40,7 +40,7 @@ $connections = new ConnectionRepository($pdo);
 $subscribers = new SubscriberRepository($pdo);
 $karandash = new KarandashRepository($pdo);
 
-
+$subscriberDebt = 0.0;
 
 
 
@@ -668,6 +668,11 @@ if ($module === 'stat') {
         $subscriber = $data['subscriber'] ?? '';
         $subscriberAddress = $data['address'] ?? '';
         $subscriberTariff = $data['tariff'] ?? '';
+
+        $subscriberDebt = (float) (
+            $subscriberRow['debt']
+            ?? 0
+        );
 
         $subscriberKarandash = $subscriberAddress !== ''
             ? $karandash->findByAddress($subscriberAddress)
