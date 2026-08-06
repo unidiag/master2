@@ -1282,14 +1282,39 @@ elseif ($module === 'stat'): ?>
                 </div>
             </div>
 
-            <label class="apartments-sort">
-                <input
-                    id="apartments-sort-debt"
-                    type="checkbox"
-                >
+            <div class="apartments-heading__controls">
+                <label class="apartments-group-control">
+                    <span>Группа</span>
 
-                <span>Задолженность</span>
-            </label>
+                    <select
+                        id="apartments-group-size"
+                        class="apartments-group-control__select"
+                    >
+                        <?php for ($groupSize = 0; $groupSize <= 6; $groupSize++): 
+                            if ($groupSize === 1) continue;
+                        ?>
+                            <option
+                                value="<?= e((string) $groupSize) ?>"
+                                <?= $groupSize === 4 ? 'selected' : '' ?>
+                            >
+                                <?= $groupSize === 0
+                                    ? 'Нет'
+                                    : e((string) $groupSize)
+                                ?>
+                            </option>
+                        <?php endfor; ?>
+                    </select>
+                </label>
+
+                <label class="apartments-sort">
+                    <input
+                        id="apartments-sort-debt"
+                        type="checkbox"
+                    >
+
+                    <span>Задолженность</span>
+                </label>
+            </div>
         </div>
 
     <?php if (!$apartments): ?>
@@ -1368,60 +1393,145 @@ elseif ($module === 'stat'): ?>
         </div>
 
 
-    <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const checkbox = document.getElementById(
-            'apartments-sort-debt'
-        );
 
-        const grid = document.getElementById('apartment-grid');
 
-        if (!checkbox || !grid) {
-            return;
-        }
+        <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const checkbox = document.getElementById(
+                'apartments-sort-debt'
+            );
 
-        const cards = Array.from(
-            grid.querySelectorAll('.apartment-card')
-        );
+            const groupSelect = document.getElementById(
+                'apartments-group-size'
+            );
 
-        checkbox.addEventListener('change', function () {
-            const sortedCards = cards.slice();
+            const grid = document.getElementById(
+                'apartment-grid'
+            );
 
-            if (checkbox.checked) {
-                sortedCards.sort(function (a, b) {
-                    const debtA = parseFloat(a.dataset.debt) || 0;
-                    const debtB = parseFloat(b.dataset.debt) || 0;
-
-                    if (debtB !== debtA) {
-                        return debtB - debtA;
-                    }
-
-                    return compareApartments(a, b);
-                });
-            } else {
-                sortedCards.sort(compareApartments);
+            if (!checkbox || !groupSelect || !grid) {
+                return;
             }
 
-            sortedCards.forEach(function (card) {
-                grid.appendChild(card);
-            });
-        });
-
-        function compareApartments(a, b) {
-            const apartmentA = a.dataset.apartment || '';
-            const apartmentB = b.dataset.apartment || '';
-
-            return apartmentA.localeCompare(
-                apartmentB,
-                'ru',
-                {
-                    numeric: true,
-                    sensitivity: 'base'
-                }
+            /*
+            * Сохраняем исходные карточки отдельно.
+            * После группировки непосредственными дочерними
+            * элементами grid станут уже блоки.
+            */
+            const cards = Array.from(
+                grid.querySelectorAll('.apartment-card')
             );
-        }
-    });
-    </script>
+
+            function compareApartments(a, b) {
+                const apartmentA =
+                    a.dataset.apartment || '';
+
+                const apartmentB =
+                    b.dataset.apartment || '';
+
+                return apartmentA.localeCompare(
+                    apartmentB,
+                    'ru',
+                    {
+                        numeric: true,
+                        sensitivity: 'base'
+                    }
+                );
+            }
+
+            function getSortedCards() {
+                const sortedCards = cards.slice();
+
+                if (checkbox.checked) {
+                    sortedCards.sort(function (a, b) {
+                        const debtA =
+                            parseFloat(a.dataset.debt) || 0;
+
+                        const debtB =
+                            parseFloat(b.dataset.debt) || 0;
+
+                        if (debtB !== debtA) {
+                            return debtB - debtA;
+                        }
+
+                        return compareApartments(a, b);
+                    });
+                } else {
+                    sortedCards.sort(compareApartments);
+                }
+
+                return sortedCards;
+            }
+
+            function renderApartmentGroups() {
+                const groupSize = Math.max(
+                0,
+                Math.min(
+                    6,
+                    Number.parseInt(groupSelect.value, 10)
+                )
+                );
+
+                const sortedCards = getSortedCards();
+
+                grid.replaceChildren();
+
+                if (groupSize === 0) {
+                    sortedCards.forEach(function (card) {
+                        grid.appendChild(card);
+                });
+
+                grid.classList.add('apartment-grid--ungrouped');
+                    return;
+                }
+
+                grid.classList.remove('apartment-grid--ungrouped');
+
+                for (
+                    let index = 0;
+                    index < sortedCards.length;
+                    index += groupSize
+                ) {
+                    const group = document.createElement('div');
+
+                    group.className = 'apartment-group';
+
+                    group.style.setProperty(
+                        '--apartment-group-size',
+                        String(groupSize)
+                    );
+
+                    const groupCards = sortedCards.slice(
+                        index,
+                        index + groupSize
+                    );
+
+                    groupCards.forEach(function (card) {
+                        group.appendChild(card);
+                    });
+
+                    grid.appendChild(group);
+                }
+            }
+
+            checkbox.addEventListener(
+                'change',
+                renderApartmentGroups
+            );
+
+            groupSelect.addEventListener(
+                'change',
+                renderApartmentGroups
+            );
+
+            /*
+            * При первом открытии сразу формируем блоки
+            * по четыре квартиры.
+            */
+            renderApartmentGroups();
+        });
+        </script>
+
 
 
 

@@ -566,7 +566,9 @@ final class SubscriberRepository
             'address' => $house . '-%',
         ]);
 
-        $apartments = [];
+        $apartmentsByNumber = [];
+        $additionalApartments = [];
+        $maxApartmentNumber = 0;
 
         while ($row = $statement->fetch(PDO::FETCH_ASSOC)) {
             $address = trim((string) ($row['address'] ?? ''));
@@ -576,35 +578,102 @@ final class SubscriberRepository
             }
 
             $parts = explode('-', $address);
-            $apartmentNumber = trim((string) array_pop($parts));
+            $apartmentNumber = trim(
+                (string) array_pop($parts)
+            );
 
             if ($apartmentNumber === '') {
                 continue;
             }
 
-            $sumRaw = $this->parseLegacySum($row['summ'] ?? '');
-            $tariff = trim((string) ($row['tarif'] ?? ''));
+            $sumRaw = $this->parseLegacySum(
+                $row['summ'] ?? ''
+            );
 
-
-
+            $tariff = trim(
+                (string) ($row['tarif'] ?? '')
+            );
 
             $debt = max(0, $sumRaw) / 10000;
 
-
-
-
-            $apartments[] = [
+            $apartment = [
                 'number' => $apartmentNumber,
                 'number_sort' => (int) $apartmentNumber,
-                'personal' => trim((string) ($row['personal'] ?? '')),
-                'subscriber' => trim((string) ($row['account'] ?? '')),
+                'personal' => trim(
+                    (string) ($row['personal'] ?? '')
+                ),
+                'subscriber' => trim(
+                    (string) ($row['account'] ?? '')
+                ),
                 'tariff' => $tariff,
                 'debt' => $debt,
                 'address' => $address,
                 'karandash_descr' => trim(
                     (string) ($row['karandash_descr'] ?? '')
                 ),
+                'exists' => true,
             ];
+
+            /*
+            * Обычные номера квартир: 1, 2, 3...
+            */
+            if (ctype_digit($apartmentNumber)) {
+                $number = (int) $apartmentNumber;
+
+                if ($number <= 0) {
+                    continue;
+                }
+
+                $apartmentsByNumber[$number] = $apartment;
+                $maxApartmentNumber = max(
+                    $maxApartmentNumber,
+                    $number
+                );
+
+                continue;
+            }
+
+            /*
+            * Нестандартные номера вроде 12А, 12/1 и т.п.
+            * Не теряем, но и не используем для заполнения диапазона.
+            */
+            $additionalApartments[] = $apartment;
+        }
+
+        $apartments = [];
+
+        /*
+        * Создаём непрерывный список квартир от 1
+        * до максимального найденного номера.
+        */
+        for (
+            $number = 1;
+            $number <= $maxApartmentNumber;
+            $number++
+        ) {
+            if (isset($apartmentsByNumber[$number])) {
+                $apartments[] = $apartmentsByNumber[$number];
+                continue;
+            }
+
+            $apartments[] = [
+                'number' => (string) $number,
+                'number_sort' => $number,
+                'personal' => '',
+                'subscriber' => '',
+                'tariff' => 'Нет договора',
+                'debt' => 0,
+                'address' => $house . '-' . $number,
+                'karandash_descr' => '',
+                'exists' => false,
+            ];
+        }
+
+        /*
+        * Добавляем нестандартные номера квартир.
+        */
+        foreach ($additionalApartments as $apartment) {
+            $apartments[] = $apartment;
         }
 
         usort($apartments, function ($a, $b) {
@@ -620,6 +689,8 @@ final class SubscriberRepository
 
             return $numberA <=> $numberB;
         });
+
+
 
         return [
             'update' => $update,

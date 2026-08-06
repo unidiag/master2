@@ -197,29 +197,6 @@ function require_auth(
 
     $rememberLifetime = $rememberDays * 86400;
 
-    /*
-    * Сервер должен хранить данные сессии не меньше,
-    * чем живёт cookie «Запомнить меня».
-    */
-    if (session_status() !== PHP_SESSION_ACTIVE) {
-        ini_set(
-            'session.gc_maxlifetime',
-            (string) $rememberLifetime
-        );
-
-        ini_set('session.use_strict_mode', '1');
-        ini_set('session.cookie_httponly', '1');
-        ini_set('session.cookie_samesite', 'Lax');
-
-        if (
-            !empty($_SERVER['HTTPS'])
-            && $_SERVER['HTTPS'] !== 'off'
-        ) {
-            ini_set('session.cookie_secure', '1');
-        }
-
-        session_start();
-    }
 
     /*
     * Выход нужно обрабатывать до проверки текущей авторизации.

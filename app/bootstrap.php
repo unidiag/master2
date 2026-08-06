@@ -4,14 +4,43 @@ declare(strict_types=1);
 
 $config = require dirname(__DIR__) . '/config.php';
 
-date_default_timezone_set((string)($config['app']['timezone'] ?? 'Europe/Minsk'));
+date_default_timezone_set(
+    (string) (
+        $config['app']['timezone']
+        ?? 'Europe/Minsk'
+    )
+);
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
+    $rememberDays = max(
+        1,
+        min(
+            365,
+            (int) (
+                $config['auth']['remember_days']
+                ?? 30
+            )
+        )
+    );
+
+    $rememberLifetime = $rememberDays * 86400;
+
+    ini_set(
+        'session.gc_maxlifetime',
+        (string) $rememberLifetime
+    );
+
+    ini_set('session.use_strict_mode', '1');
+
     session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'secure' => !empty($_SERVER['HTTPS'])
+            && $_SERVER['HTTPS'] !== 'off',
         'httponly' => true,
-        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
         'samesite' => 'Lax',
     ]);
+
     session_start();
 }
 
