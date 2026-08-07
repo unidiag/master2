@@ -102,6 +102,7 @@ $cssVersion = is_file($cssFile)
                     ['stat', 'Статистика', '▦'],
                     ['debtors', 'Должники', '₽'],
                     ['karandash', 'Карандаш', '✎'],
+                    ['channels', 'Каналы', '▤'],
                 ];
             ?>
 
@@ -576,6 +577,160 @@ $cssVersion = is_file($cssFile)
         </div>
     </form>
 </dialog>
+
+
+
+
+
+
+
+
+
+
+
+<?php elseif ($module === 'channels'): ?>
+
+    <div class="channels-devices">
+
+        <?php foreach ($data['devices'] ?? [] as $device): ?>
+
+            <section class="channels-device">
+
+                <div class="channels-device-head">
+                    <div>
+                        <strong>
+                            <?= e($device['ip']) ?>
+                        </strong>
+
+                        <?php if ($device['online'] ?? false): ?>
+                            <span class="channel-device-status online">
+                                ONLINE
+                            </span>
+                        <?php else: ?>
+                            <span class="channel-device-status offline">
+                                OFFLINE
+                            </span>
+                        <?php endif; ?>
+                    </div>
+
+                    <?php if ($device['online'] ?? false): ?>
+                        <span class="muted">
+                            <?= count($device['channels'] ?? []) ?>
+                            каналов
+                        </span>
+                    <?php endif; ?>
+                </div>
+
+                <?php if (!($device['online'] ?? false)): ?>
+
+                    <div class="alert alert-error">
+                        <?= e(
+                            $device['error']
+                            ?? 'Устройство недоступно'
+                        ) ?>
+                    </div>
+
+                <?php else: ?>
+
+                    <div class="channels-table-wrap">
+
+                        <table class="channels-table">
+                            <thead>
+                                <tr>
+                                    <th>Канал</th>
+                                    <th>Название</th>
+                                    <th>Частота</th>
+                                    <th>Уровень</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+
+                            <?php foreach (
+                                $device['channels'] ?? []
+                                as $channel
+                            ): ?>
+
+                                <tr>
+                                    <td class="channel-number">
+                                        <?= e($channel['channel']) ?>
+                                    </td>
+
+                                    <td class="channel-name">
+                                        <?= e(
+                                            $channel['service_name']
+                                            ?: '—'
+                                        ) ?>
+                                    </td>
+
+                                    <td>
+                                        <?= e(
+                                            number_format(
+                                                (float) $channel['freq_mhz'],
+                                                0,
+                                                '.',
+                                                ''
+                                            )
+                                        ) ?>
+                                        <span class="muted">
+                                            МГц
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <?= e(
+                                            number_format(
+                                                (float) $channel['level_db'],
+                                                1,
+                                                '.',
+                                                ''
+                                            )
+                                        ) ?>
+                                        <span class="muted">
+                                            дБ
+                                        </span>
+                                    </td>
+                                </tr>
+
+                            <?php endforeach; ?>
+
+                            <?php if (
+                                empty($device['channels'])
+                            ): ?>
+
+                                <tr>
+                                    <td
+                                        colspan="4"
+                                        class="channels-empty"
+                                    >
+                                        Включённые каналы отсутствуют
+                                    </td>
+                                </tr>
+
+                            <?php endif; ?>
+
+                            </tbody>
+                        </table>
+
+                    </div>
+
+                <?php endif; ?>
+
+            </section>
+
+        <?php endforeach; ?>
+
+    </div>
+
+
+
+
+
+
+
+
+
+
             
 
 <?php elseif ($module === 'debtors'): ?>

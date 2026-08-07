@@ -1641,3 +1641,127 @@ body.is-page-loading .app-shell {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
+
+
+
+
+
+
+
+
+
+.channels-devices {
+    display: grid;
+    gap: 20px;
+}
+
+.channels-device {
+    overflow: hidden;
+    background: var(--surface, #fff);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 14px;
+}
+
+.channels-device-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 18px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.channels-device-head > div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.channels-device-head strong {
+    font-size: 17px;
+}
+
+.channel-device-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 7px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.channel-device-status.online {
+    color: #166534;
+    background: #dcfce7;
+}
+
+.channel-device-status.offline {
+    color: #991b1b;
+    background: #fee2e2;
+}
+
+.channels-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.channels-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.channels-table th,
+.channels-table td {
+    padding: 13px 18px;
+    text-align: left;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+    white-space: nowrap;
+}
+
+.channels-table th {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.channels-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.channels-table tbody tr:hover {
+    background: rgba(148, 163, 184, 0.07);
+}
+
+.channel-number {
+    width: 70px;
+    font-weight: 600;
+}
+
+.channel-name {
+    width: 100%;
+    font-weight: 500;
+}
+
+.channels-empty {
+    padding: 28px !important;
+    color: #64748b;
+    text-align: center !important;
+}
+
+.channels-device > .alert {
+    margin: 16px;
+}
+
+@media (max-width: 640px) {
+    .channels-device-head {
+        padding: 14px;
+    }
+
+    .channels-table th,
+    .channels-table td {
+        padding: 11px 14px;
+    }
+}

@@ -40,6 +40,8 @@ $connections = new ConnectionRepository($pdo);
 $subscribers = new SubscriberRepository($pdo);
 $karandash = new KarandashRepository($pdo);
 $groups = new GroupRepository($pdo);
+$channels = new ChannelService($config['channels'] ?? []);
+
 
 $apartmentGroupSize = 4;
 
@@ -777,6 +779,7 @@ $titles = [
     'stat' => 'Статистика',
     'debtors' => 'Должники',
     'karandash' => 'Карандаш',
+    'channels' => 'Каналы',
 ];
 
 $title = isset($titles[$module]) ? $titles[$module] : 'Заявки';
@@ -856,7 +859,11 @@ if ($module === 'karandash') {
 }
 
 
-
+if ($module === 'channels') {
+    $data = [
+        'devices' => $channels->getAll(),
+    ];
+}
 
 $flashes = consume_flashes();
 require __DIR__ . '/app/view.php';

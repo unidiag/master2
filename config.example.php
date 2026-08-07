@@ -43,4 +43,13 @@ return [
         'bot_token' => getenv('TELEGRAM_BOT_TOKEN') ?: '',
         'chat_ids' => ['298461914'],
     ],
+
+    'channels' => [
+        'devices' => [
+            '192.168.1.30',
+            '192.168.1.31',
+        ],
+        'username' => 'admin',
+        'password' => '',
+    ],
 ];
