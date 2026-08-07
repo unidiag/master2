@@ -1,12 +1,12 @@
 <?php
 
-declare(strict_types=1);
-
 final class ChannelService
 {
-    public function __construct(
-        private readonly array $config
-    ) {
+    private $config;
+
+    public function __construct(array $config)
+    {
+        $this->config = $config;
     }
 
     public function getAll(): array
@@ -57,7 +57,6 @@ final class ChannelService
                     }
 
                     $index = (int) ($channel['ch_index'] ?? 0);
-
                     $program = $outputInfo['prg_info'][$index] ?? [];
 
                     $channels[] = [
@@ -171,10 +170,7 @@ final class ChannelService
 
     private function decodeServiceName(string $name): string
     {
-        if (
-            $name === ''
-            || $name === 'NONE'
-        ) {
+        if ($name === '' || $name === 'NONE') {
             return '';
         }
 
