@@ -140,6 +140,101 @@ final class ConnectionRepository
     }
 }
 
+
+
+
+final class GroupRepository
+{
+    public function __construct(
+        private PDO $db
+    ) {
+    }
+
+    public function getSize(
+        string $house,
+        int $default = 4
+    ): int {
+        $house = trim($house);
+
+        if ($house === '') {
+            return $default;
+        }
+
+        $statement = $this->db->prepare(
+            'SELECT group_size
+             FROM master_groups
+             WHERE house = :house
+             LIMIT 1'
+        );
+
+        $statement->execute([
+            'house' => $house,
+        ]);
+
+        $value = $statement->fetchColumn();
+
+        if ($value === false) {
+            return $default;
+        }
+
+        $groupSize = (int) $value;
+
+        if ($groupSize < 0 || $groupSize > 6) {
+            return $default;
+        }
+
+        return $groupSize;
+    }
+
+    public function saveSize(
+        string $house,
+        int $groupSize
+    ): void {
+        $house = trim($house);
+
+        if ($house === '') {
+            throw new InvalidArgumentException(
+                'Название дома не указано.'
+            );
+        }
+
+        if ($groupSize < 0 || $groupSize > 6) {
+            throw new InvalidArgumentException(
+                'Размер группы должен быть от 0 до 6.'
+            );
+        }
+
+        $statement = $this->db->prepare(
+            'INSERT INTO master_groups (
+                house,
+                group_size
+            ) VALUES (
+                :house,
+                :group_size
+            )
+            ON DUPLICATE KEY UPDATE
+                group_size = VALUES(group_size),
+                updated_at = CURRENT_TIMESTAMP'
+        );
+
+        $statement->bindValue(
+            ':house',
+            $house,
+            PDO::PARAM_STR
+        );
+
+        $statement->bindValue(
+            ':group_size',
+            $groupSize,
+            PDO::PARAM_INT
+        );
+
+        $statement->execute();
+    }
+}
+
+
+
 final class SubscriberRepository
 {
     private PDO $db;

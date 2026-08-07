@@ -8,7 +8,7 @@
 
 ## Требования
 
-- PHP 8.1+
+- PHP 7.4
 - расширения PDO и pdo_mysql
 - MariaDB/MySQL
 - Apache или Nginx

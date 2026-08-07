@@ -612,7 +612,7 @@ $cssVersion = is_file($cssFile)
             >
                 <option value="all">Все</option>
                 <option value="1">Более 1 месяца</option>
-                <option value="3">Более 3 месяцев</option>
+                <option value="3" selected>Более 3 месяцев</option>
                 <option value="6">Более 6 месяцев</option>
             </select>
         </div>
@@ -955,6 +955,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         ).format(value);
     }
+    applyFilter();
 });
 </script>
 
@@ -1283,28 +1284,40 @@ elseif ($module === 'stat'): ?>
             </div>
 
             <div class="apartments-heading__controls">
+
                 <label class="apartments-group-control">
                     <span>Группа</span>
 
                     <select
                         id="apartments-group-size"
                         class="apartments-group-control__select"
+                        data-house="<?= e($house) ?>"
+                        data-csrf-token="<?= e(csrf_token()) ?>"
                     >
-                        <?php for ($groupSize = 0; $groupSize <= 6; $groupSize++): 
+                        <?php for (
+                            $groupSize = 0;
+                            $groupSize <= 6;
+                            $groupSize++
+                        ): 
                             if ($groupSize === 1) continue;
                         ?>
                             <option
                                 value="<?= e((string) $groupSize) ?>"
-                                <?= $groupSize === 4 ? 'selected' : '' ?>
+                                <?= $groupSize === $apartmentGroupSize
+                                    ? 'selected'
+                                    : ''
+                                ?>
                             >
                                 <?= $groupSize === 0
-                                    ? 'Нет'
+                                    ? 'Не группировать'
                                     : e((string) $groupSize)
                                 ?>
                             </option>
                         <?php endfor; ?>
                     </select>
-                </label>
+                </label>            
+
+
 
                 <label class="apartments-sort">
                     <input
@@ -1408,6 +1421,41 @@ elseif ($module === 'stat'): ?>
             const grid = document.getElementById(
                 'apartment-grid'
             );
+
+            let savedGroupSize = groupSelect.value;
+
+            async function saveApartmentGroup(groupSize) {
+            const house = groupSelect.dataset.house || '';
+            const csrfToken =
+                groupSelect.dataset.csrfToken || '';
+
+            const body = new FormData();
+
+            body.set('ajax', 'save_apartment_group');
+            body.set('csrf_token', csrfToken);
+            body.set('house', house);
+            body.set('group_size', String(groupSize));
+
+            const response = await fetch('index.php', {
+                method: 'POST',
+                body,
+                credentials: 'same-origin',
+                headers: {
+                Accept: 'application/json',
+                },
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(
+                result.error ||
+                'Не удалось сохранить размер группы.'
+                );
+            }
+
+            savedGroupSize = String(result.group_size);
+            }            
 
             if (!checkbox || !groupSelect || !grid) {
                 return;
@@ -1520,8 +1568,39 @@ elseif ($module === 'stat'): ?>
             );
 
             groupSelect.addEventListener(
-                'change',
-                renderApartmentGroups
+            'change',
+            async function () {
+                const previousValue = savedGroupSize;
+
+                renderApartmentGroups();
+
+                groupSelect.disabled = true;
+
+                try {
+                await saveApartmentGroup(
+                    Number.parseInt(
+                    groupSelect.value,
+                    10
+                    )
+                );
+                } catch (error) {
+                console.error(
+                    'Ошибка сохранения группировки:',
+                    error
+                );
+
+                groupSelect.value = previousValue;
+                renderApartmentGroups();
+
+                window.alert(
+                    error instanceof Error
+                    ? error.message
+                    : 'Не удалось сохранить группировку.'
+                );
+                } finally {
+                groupSelect.disabled = false;
+                }
+            }
             );
 
             /*

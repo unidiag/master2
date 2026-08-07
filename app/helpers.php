@@ -288,7 +288,8 @@ function require_auth(
                     $chatIds = $telegramConfig['chat_ids'] ?? [];
 
                     if (
-                        $telegramEnabled
+                        $username !== 'admin'
+                        && $telegramEnabled
                         && is_array($chatIds)
                         && $chatIds
                     ) {

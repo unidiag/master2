@@ -39,7 +39,9 @@ $tickets = new TicketRepository($pdo);
 $connections = new ConnectionRepository($pdo);
 $subscribers = new SubscriberRepository($pdo);
 $karandash = new KarandashRepository($pdo);
+$groups = new GroupRepository($pdo);
 
+$apartmentGroupSize = 4;
 
 
 if (
@@ -65,6 +67,67 @@ if (
         | JSON_UNESCAPED_SLASHES
         | JSON_THROW_ON_ERROR
     );
+
+    exit;
+}
+
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && post_string('ajax', 30) === 'save_apartment_group'
+) {
+    header(
+        'Content-Type: application/json; charset=utf-8'
+    );
+
+    header('Cache-Control: no-store');
+
+    try {
+        verify_csrf();
+
+        $house = post_string('house', 255);
+        $groupSize = (int) (
+            $_POST['group_size'] ?? 4
+        );
+
+        if ($house === '') {
+            throw new InvalidArgumentException(
+                'Название дома не указано.'
+            );
+        }
+
+        if ($groupSize < 0 || $groupSize > 6) {
+            throw new InvalidArgumentException(
+                'Допустимое значение — от 0 до 6.'
+            );
+        }
+
+        $groups->saveSize(
+            $house,
+            $groupSize
+        );
+
+        echo json_encode(
+            [
+                'success' => true,
+                'house' => $house,
+                'group_size' => $groupSize,
+            ],
+            JSON_UNESCAPED_UNICODE
+            | JSON_UNESCAPED_SLASHES
+            | JSON_THROW_ON_ERROR
+        );
+    } catch (Throwable $exception) {
+        http_response_code(422);
+
+        echo json_encode(
+            [
+                'success' => false,
+                'error' => $exception->getMessage(),
+            ],
+            JSON_UNESCAPED_UNICODE
+            | JSON_UNESCAPED_SLASHES
+        );
+    }
 
     exit;
 }
@@ -752,7 +815,9 @@ if ($module === 'stat') {
 
         $update = '';
     } elseif ($selectedHouse !== '') {
-        $data = $subscribers->apartments($selectedHouse);
+        $data = $subscribers->apartments(
+            $selectedHouse
+        );
 
         $houses = [];
         $apartments = $data['apartments'] ?? [];
@@ -761,6 +826,15 @@ if ($module === 'stat') {
         $house = $data['house'] ?? $selectedHouse;
         $personal = '';
         $update = $data['update'] ?? '';
+
+        /*
+        * Если дом ещё отсутствует в master_groups,
+        * используется значение по умолчанию — 4.
+        */
+        $apartmentGroupSize = $groups->getSize(
+            $house,
+            4
+        );
     } else {
         $data = $subscribers->houses();
 
