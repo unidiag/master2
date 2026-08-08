@@ -561,3 +561,54 @@ if (ticketCreateForm instanceof HTMLFormElement) {
       ticketCreateForm.reset();
     });
 }
+
+
+
+
+
+
+
+
+
+
+document.addEventListener('DOMContentLoaded', function () {
+    const statusFilter = document.getElementById(
+        'status-filter'
+    );
+
+    if (!statusFilter) {
+        return;
+    }
+
+    const cards = Array.from(
+        document.querySelectorAll(
+            '.cards > .card[data-status]'
+        )
+    );
+
+    function applyStatusFilter() {
+        const status = statusFilter.value;
+
+        cards.forEach(function (card) {
+            const cardStatus =
+                card.dataset.status || '';
+
+            card.hidden =
+                status !== 'all'
+                && cardStatus !== status;
+        });
+    }
+
+    statusFilter.addEventListener(
+        'change',
+        applyStatusFilter
+    );
+
+    /*
+     * По умолчанию показываем
+     * только открытые записи.
+     */
+    statusFilter.value = 'open';
+
+    applyStatusFilter();
+});

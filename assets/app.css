@@ -2341,3 +2341,8 @@ body.is-page-loading .app-shell {
 
     resize: vertical;
 }
+
+
+.cards > .card[hidden] {
+    display: none;
+}

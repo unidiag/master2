@@ -127,10 +127,22 @@ $cssVersion = is_file($cssFile)
                     <input type="hidden" name="module" value="<?= e($module) ?>">
                     <input class="input" type="search" name="search" value="<?= e($search) ?>" placeholder="Поиск…" autocomplete="off">
                     <?php if ($module !== 'database'): ?>
-                    <select class="input select" name="status">
-                        <option value="all" <?= $status==='all'?'selected':'' ?>>Все</option>
-                        <option value="open" <?= $status==='open'?'selected':'' ?>>Открытые</option>
-                        <option value="done" <?= $status==='done'?'selected':'' ?>>Выполненные</option>
+                    <select
+                        class="input select"
+                        id="status-filter"
+                        name="status"
+                    >
+                        <option value="all">
+                            Все
+                        </option>
+
+                        <option value="open" selected>
+                            Открытые
+                        </option>
+
+                        <option value="done">
+                            Выполненные
+                        </option>
                     </select>
                     <?php endif; ?>
                     <button class="button" type="submit">Найти</button>
@@ -142,7 +154,10 @@ $cssVersion = is_file($cssFile)
         <?php if ($module === 'zayavki'): ?>
             <div class="cards">
             <?php foreach ($data['rows'] as $row): ?>
-                <article class="card <?= is_done($row)?'done':'' ?>">
+                <article
+                    class="card <?= is_done($row) ? 'done' : '' ?>"
+                    data-status="<?= is_done($row) ? 'done' : 'open' ?>"
+                >
                     <div class="card-head"><div><span class="id">#<?= e($row['id']) ?></span><h2><?= e($row['abonent'] ?: $row['abonent_ajax'] ?: 'Без имени') ?></h2></div><span class="status <?= is_done($row)?'status-done':'status-open' ?>"><?= is_done($row)?'Выполнена':'Открыта' ?></span></div>
                     <div class="address"><?= e($row['address'] ?: $row['address_ajax'] ?: 'Адрес не указан') ?></div>
                     <p><?= e($row['desc']) ?></p>
@@ -190,7 +205,10 @@ $cssVersion = is_file($cssFile)
         <?php elseif ($module === 'podkluchki'): ?>
             <div class="cards">
             <?php foreach ($data['rows'] as $row): ?>
-                <article class="card <?= is_done($row)?'done':'' ?>">
+                <article
+                    class="card <?= is_done($row) ? 'done' : '' ?>"
+                    data-status="<?= is_done($row) ? 'done' : 'open' ?>"
+                >
                     <div class="card-head"><div><span class="id">#<?= e($row['id']) ?></span><h2><?= e($row['abonent'] ?: 'Без имени') ?></h2></div><span class="status <?= is_done($row)?'status-done':'status-open' ?>"><?= is_done($row)?'Завершено':'Открыто' ?></span></div>
                     <div class="address"><?= e($row['address'] ?: 'Адрес не указан') ?></div><p><?= e($row['desc']) ?></p>
                     <dl class="meta"><div><dt>Создано</dt><dd><?= e(format_datetime($row['time'])) ?></dd></div><div><dt>Принял</dt><dd><?= e($row['who']) ?></dd></div><?php if (is_done($row)): ?><div><dt>Мастер</dt><dd><?= e($row['master']) ?></dd></div><div><dt>Результат</dt><dd><?= e($row['result']) ?></dd></div><?php endif; ?></dl>
@@ -2698,6 +2716,84 @@ function sortCards() {
 
 
 
-<dialog class="modal" id="complete-modal"><form method="post"><div class="modal-head"><h2>Завершение</h2><button type="button" class="icon-button" data-modal-close>×</button></div><input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="complete"><input type="hidden" name="id" id="complete-id"><label>Мастер<input class="input" name="master" maxlength="50" required></label><label>Результат<input class="input" name="result" maxlength="50" required></label><label id="cost-field">Стоимость<input class="input" name="cost" maxlength="10" inputmode="decimal"></label><button class="button primary full" type="submit">Сохранить</button></form></dialog>
+
+
+<dialog class="modal" id="complete-modal">
+    <form method="post">
+        <div class="modal-head">
+            <h2>Завершение</h2>
+
+            <button
+                type="button"
+                class="icon-button"
+                data-modal-close
+            >
+                ×
+            </button>
+        </div>
+
+        <input
+            type="hidden"
+            name="csrf_token"
+            value="<?= e(csrf_token()) ?>"
+        >
+
+        <input
+            type="hidden"
+            name="action"
+            value="complete"
+        >
+
+        <input
+            type="hidden"
+            name="id"
+            id="complete-id"
+        >
+
+        <label>
+            Мастер
+
+            <input
+                class="input"
+                name="master"
+                maxlength="50"
+                value="<?= e(current_user()) ?>"
+                required
+            >
+        </label>
+
+        <label>
+            Результат
+
+            <input
+                class="input"
+                name="result"
+                maxlength="50"
+                value="OK"
+                required
+            >
+        </label>
+
+        <label id="cost-field">
+            Стоимость
+
+            <input
+                class="input"
+                name="cost"
+                maxlength="10"
+                inputmode="decimal"
+                value="-"
+            >
+        </label>
+
+        <button
+            class="button primary full"
+            type="submit"
+        >
+            Сохранить
+        </button>
+    </form>
+</dialog>
+
 <?php endif; ?>
 </body></html>

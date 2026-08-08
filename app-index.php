@@ -36,17 +36,7 @@ $offset = ($page - 1) * $perPage;
 
 $search = get_string('search', 100);
 
-$status = in_array(
-    ($_GET['status'] ?? 'all'),
-    [
-        'all',
-        'open',
-        'done',
-    ],
-    true
-)
-    ? (string) ($_GET['status'] ?? 'all')
-    : 'all';
+$status = 'open';
 
 $tickets = new TicketRepository($pdo);
 $connections = new ConnectionRepository($pdo);
@@ -1179,7 +1169,7 @@ $data = [];
 if ($module === 'zayavki') {
     $data = $tickets->list(
         $search,
-        $status,
+        'all',
         $perPage,
         $offset
     );
@@ -1188,7 +1178,7 @@ if ($module === 'zayavki') {
 if ($module === 'podkluchki') {
     $data = $connections->list(
         $search,
-        $status,
+        'all',
         $perPage,
         $offset
     );
