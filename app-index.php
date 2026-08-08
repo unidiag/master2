@@ -1166,7 +1166,8 @@ $titles = [
     'stat' => 'Статистика',
     'debtors' => 'Должники',
     'karandash' => 'Карандаш',
-    'channels' => 'Каналы',
+    'analog' => 'Аналог',
+    'digital' => 'Цифра',
 ];
 
 $title = isset($titles[$module])
@@ -1426,10 +1427,22 @@ if ($module === 'karandash') {
         $karandash->groupedByHouse();
 }
 
-if ($module === 'channels') {
+/*
+ * Аналоговое телевидение.
+ */
+if ($module === 'analog') {
     $data = [
         'channels' => $channels->getAll(),
     ];
+}
+
+/*
+ * Цифровое телевидение.
+ *
+ * Пока модуль является заготовкой.
+ */
+if ($module === 'digital') {
+    $data = [];
 }
 
 $flashes = consume_flashes();

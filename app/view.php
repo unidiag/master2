@@ -107,7 +107,8 @@ $cssVersion = is_file($cssFile)
                     ['stat', 'Статистика', '▦'],
                     ['debtors', 'Должники', '₽'],
                     ['karandash', 'Карандаш', '✎'],
-                    ['channels', 'Каналы', '▤'],
+                    ['analog', 'Аналог', '▤'],
+                    ['digital', 'Цифра', '▥'],
                 ];
             ?>
 
@@ -595,13 +596,13 @@ $cssVersion = is_file($cssFile)
 
 
 
-<?php elseif ($module === 'channels'): ?>
+<?php elseif ($module === 'analog'): ?>
 
     <section class="channels-page">
 
         <div class="page-heading">
             <div>
-                <h1>Каналы</h1>
+                <h1>Аналоговые каналы</h1>
 
                 <div class="page-heading__counter">
                     <?= e(number_format(
@@ -719,7 +720,29 @@ $cssVersion = is_file($cssFile)
 
 
 
+<?php elseif ($module === 'digital'): ?>
 
+    <section class="channels-page">
+
+        <div class="page-heading">
+            <div>
+                <h1>Цифровые каналы</h1>
+
+                <div class="page-heading__counter">
+                    Цифровое телевидение
+                </div>
+            </div>
+        </div>
+
+        <div class="empty-state">
+            <strong>Раздел пока не заполнен</strong>
+
+            <span>
+                Информация о цифровых телеканалах будет добавлена позже.
+            </span>
+        </div>
+
+    </section>
 
 
 
