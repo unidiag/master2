@@ -365,6 +365,10 @@
     text-decoration: none;
 }
 
+.house-card-link[hidden] {
+    display: none;
+}
+
 .house-card-link .house-card {
     height: 100%;
     transition:
@@ -408,10 +412,12 @@
 }
 
 .apartment-grid {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 6px;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .apartment-card {
@@ -478,38 +484,55 @@
     grid-template-columns:
         repeat(
             var(--apartment-group-size, 4),
-            minmax(92px, 1fr)
+            minmax(0, 1fr)
         );
+
     gap: 3px;
+
+    width: 100%;
     min-width: 0;
+    max-width: 100%;
+
     padding: 3px;
+
     border: 1px dashed #111827;
     border-radius: 4px;
 }
  
 
 @media (max-width: 600px) {
-    .apartment-grid {
-        width: 100%;
-        min-width: 0;
-    }
-
-    .apartment-group {
-        width: 100%;
-        max-width: 100%;
-        grid-template-columns:
-            repeat(
-                var(--apartment-group-size, 4),
-                minmax(0, 1fr)
-            );
-    }
-
     .apartment-card {
         width: 100%;
         min-width: 0;
+        padding: 10px 7px;
     }
 }
 
+
+.apartment-grid--ungrouped {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.apartments-page {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: clip;
+}
+
+
+@media (max-width: 600px) {
+    .apartment-grid--ungrouped {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+    }
+}
 
 .apartments-heading {
     align-items: flex-end;
