@@ -861,7 +861,7 @@ if ($module === 'karandash') {
 
 if ($module === 'channels') {
     $data = [
-        'devices' => $channels->getAll(),
+        'channels' => $channels->getAll(),
     ];
 }
 

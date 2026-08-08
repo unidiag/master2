@@ -588,139 +588,126 @@ $cssVersion = is_file($cssFile)
 
 
 
+
+
 <?php elseif ($module === 'channels'): ?>
 
-    <div class="channels-devices">
+    <section class="channels-page">
 
-        <?php foreach ($data['devices'] ?? [] as $device): ?>
+        <div class="page-heading">
+            <div>
+                <h1>Каналы</h1>
 
-            <section class="channels-device">
-
-                <div class="channels-device-head">
-                    <div>
-                        <strong>
-                            <?= e($device['ip']) ?>
-                        </strong>
-
-                        <?php if ($device['online'] ?? false): ?>
-                            <span class="channel-device-status online">
-                                ONLINE
-                            </span>
-                        <?php else: ?>
-                            <span class="channel-device-status offline">
-                                OFFLINE
-                            </span>
-                        <?php endif; ?>
-                    </div>
-
-                    <?php if ($device['online'] ?? false): ?>
-                        <span class="muted">
-                            <?= count($device['channels'] ?? []) ?>
-                            каналов
-                        </span>
-                    <?php endif; ?>
+                <div class="page-heading__counter">
+                    <?= e(number_format(
+                        count($data['channels'] ?? []),
+                        0,
+                        ',',
+                        ' '
+                    )) ?>
+                    каналов
                 </div>
+            </div>
+        </div>
 
-                <?php if (!($device['online'] ?? false)): ?>
+        <?php $channelRows = $data['channels'] ?? []; ?>
 
-                    <div class="alert alert-error">
-                        <?= e(
-                            $device['error']
-                            ?? 'Устройство недоступно'
-                        ) ?>
-                    </div>
+        <?php if (!$channelRows): ?>
 
-                <?php else: ?>
+            <div class="empty-state">
+                Каналы не найдены.
+            </div>
 
-                    <div class="channels-table-wrap">
+        <?php else: ?>
 
-                        <table class="channels-table">
-                            <thead>
-                                <tr>
-                                    <th>Канал</th>
-                                    <th>Название</th>
-                                    <th>Частота</th>
-                                    <th>Уровень</th>
-                                </tr>
-                            </thead>
+            <div class="channel-grid">
 
-                            <tbody>
+                <?php
+                    $ii = 0;
+                    foreach ($channelRows as $channel):
+                        $ii++;
+                ?>
 
-                            <?php foreach (
-                                $device['channels'] ?? []
-                                as $channel
-                            ): ?>
+                    <article
+                        class="channel-card"
+                        title="<?= e(
+                            (string) ($channel['ip'] ?? '')
+                        ) ?>"
+                    >
 
-                                <tr>
-                                    <td class="channel-number">
-                                        <?= e($channel['channel']) ?>
-                                    </td>
+                        <div class="channel-card__head">
 
-                                    <td class="channel-name">
-                                        <?= e(
-                                            $channel['service_name']
-                                            ?: '—'
-                                        ) ?>
-                                    </td>
 
-                                    <td>
-                                        <?= e(
-                                            number_format(
-                                                (float) $channel['freq_mhz'],
-                                                0,
-                                                '.',
-                                                ''
-                                            )
-                                        ) ?>
-                                        <span class="muted">
-                                            МГц
-                                        </span>
-                                    </td>
+                            <div class="channel-card__number">
+                                <?= $ii ?>
+                            </div>
 
-                                    <td>
-                                        <?= e(
-                                            number_format(
-                                                (float) $channel['level_db'],
-                                                1,
-                                                '.',
-                                                ''
-                                            )
-                                        ) ?>
-                                        <span class="muted">
-                                            дБ
-                                        </span>
-                                    </td>
-                                </tr>
+                            <div class="channel-card__frequency">
+                                <?= e(number_format(
+                                    (float) ($channel['freq_mhz'] ?? 0),
+                                    0,
+                                    ',',
+                                    ''
+                                )) ?>
 
-                            <?php endforeach; ?>
+                                <span>МГц</span>
+                            </div>
 
-                            <?php if (
-                                empty($device['channels'])
-                            ): ?>
+                        </div>
 
-                                <tr>
-                                    <td
-                                        colspan="4"
-                                        class="channels-empty"
-                                    >
-                                        Включённые каналы отсутствуют
-                                    </td>
-                                </tr>
+                        <div
+                            class="channel-card__name"
+                            title="<?= e(
+                                (string) (
+                                    $channel['service_name']
+                                    ?? ''
+                                )
+                            ) ?>"
+                        >
+                            <?= e(
+                                (string) (
+                                    $channel['service_name']
+                                    ?: 'Без названия'
+                                )
+                            ) ?>
+                        </div>
 
-                            <?php endif; ?>
+                        <div class="channel-card__footer">
 
-                            </tbody>
-                        </table>
+                            <span>
+                                CH
+                                <?= e(
+                                    (string) (
+                                        $channel['channel']
+                                        ?? ''
+                                    )
+                                ) ?>
+                            </span>
 
-                    </div>
+                            <strong>
+                                <?= e(number_format(
+                                    (float) (
+                                        $channel['level_db']
+                                        ?? 0
+                                    ),
+                                    1,
+                                    ',',
+                                    ''
+                                )) ?>
+                                дБ
+                            </strong>
 
-                <?php endif; ?>
+                        </div>
 
-            </section>
+                    </article>
 
-        <?php endforeach; ?>
+                <?php endforeach; ?>
 
-    </div>
+            </div>
+
+        <?php endif; ?>
+
+    </section>
 
 
 

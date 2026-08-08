@@ -411,13 +411,13 @@
     display: flex;
     flex-wrap: wrap;
     align-items: flex-start;
-    gap: 12px;
+    gap: 6px;
 }
 
 .apartment-card {
     position: relative;
     min-width: 0;
-    min-height: 104px;
+    min-height: 80px;
     padding: 10px 8px;
     overflow: hidden;
     background: var(--surface, #fff);
@@ -480,13 +480,35 @@
             var(--apartment-group-size, 4),
             minmax(92px, 1fr)
         );
-    gap: 8px;
+    gap: 3px;
     min-width: 0;
-    padding: 8px;
-    border: 2px dashed #111827;
-    border-radius: 8px;
+    padding: 3px;
+    border: 1px dashed #111827;
+    border-radius: 4px;
 }
+ 
 
+@media (max-width: 600px) {
+    .apartment-grid {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .apartment-group {
+        width: 100%;
+        max-width: 100%;
+        grid-template-columns:
+            repeat(
+                var(--apartment-group-size, 4),
+                minmax(0, 1fr)
+            );
+    }
+
+    .apartment-card {
+        width: 100%;
+        min-width: 0;
+    }
+}
 
 
 .apartments-heading {
@@ -496,7 +518,7 @@
 .apartments-sort {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     margin-left: auto;
     padding: 9px 12px;
     color: var(--text, #111827);
@@ -1650,118 +1672,159 @@ body.is-page-loading .app-shell {
 
 
 
-.channels-devices {
+
+
+
+
+
+
+
+
+
+
+.channels-page {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.channel-grid {
     display: grid;
-    gap: 20px;
-}
-
-.channels-device {
-    overflow: hidden;
-    background: var(--surface, #fff);
-    border: 1px solid rgba(148, 163, 184, 0.25);
-    border-radius: 14px;
-}
-
-.channels-device-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 16px 18px;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-}
-
-.channels-device-head > div {
-    display: flex;
-    align-items: center;
+    grid-template-columns:
+        repeat(auto-fill, minmax(150px, 1fr));
     gap: 10px;
 }
 
-.channels-device-head strong {
-    font-size: 17px;
+.channel-card {
+    min-width: 0;
+    padding: 13px 14px;
+
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.04);
+
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        transform 0.15s ease;
 }
 
-.channel-device-status {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 3px 7px;
-    border-radius: 6px;
-    font-size: 10px;
+.channel-card:hover {
+    border-color: #cbd5e1;
+
+    box-shadow:
+        0 4px 12px rgba(15, 23, 42, 0.08);
+
+    transform: translateY(-1px);
+}
+
+.channel-card__frequency {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+
+    color: #0f172a;
+
+    font-size: 20px;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    line-height: 1.1;
 }
 
-.channel-device-status.online {
-    color: #166534;
-    background: #dcfce7;
-}
-
-.channel-device-status.offline {
-    color: #991b1b;
-    background: #fee2e2;
-}
-
-.channels-table-wrap {
-    width: 100%;
-    overflow-x: auto;
-}
-
-.channels-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.channels-table th,
-.channels-table td {
-    padding: 13px 18px;
-    text-align: left;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
-    white-space: nowrap;
-}
-
-.channels-table th {
+.channel-card__frequency span {
     color: #64748b;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-}
 
-.channels-table tbody tr:last-child td {
-    border-bottom: 0;
-}
-
-.channels-table tbody tr:hover {
-    background: rgba(148, 163, 184, 0.07);
-}
-
-.channel-number {
-    width: 70px;
+    font-size: 11px;
     font-weight: 600;
 }
 
-.channel-name {
-    width: 100%;
-    font-weight: 500;
+.channel-card__name {
+    min-height: 34px;
+    margin-top: 9px;
+
+    overflow: hidden;
+
+    color: #334155;
+
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 17px;
+
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
-.channels-empty {
-    padding: 28px !important;
+.channel-card__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+
+    margin-top: 10px;
+    padding-top: 8px;
+
+    border-top: 1px solid #f1f5f9;
+
+    color: #94a3b8;
+
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.channel-card__footer strong {
     color: #64748b;
-    text-align: center !important;
-}
 
-.channels-device > .alert {
-    margin: 16px;
+    font-size: 11px;
+    font-weight: 600;
 }
 
 @media (max-width: 640px) {
-    .channels-device-head {
-        padding: 14px;
+    .channel-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+        gap: 8px;
     }
 
-    .channels-table th,
-    .channels-table td {
-        padding: 11px 14px;
+    .channel-card {
+        padding: 11px 12px;
+    }
+
+    .channel-card__frequency {
+        font-size: 18px;
     }
 }
+
+.channel-card__number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 30px;
+    height: 26px;
+    padding: 0 7px;
+
+    color: #475569;
+    background: #f8fafc;
+
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.channel-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+
+
+
+

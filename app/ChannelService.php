@@ -49,17 +49,17 @@ final class ChannelService
                     "http://{$ip}/product/ru/output.php"
                 );
 
-                $channels = [];
-
                 foreach ($modulator['channels'] ?? [] as $channel) {
                     if ((int) ($channel['enable'] ?? 0) !== 1) {
                         continue;
                     }
 
                     $index = (int) ($channel['ch_index'] ?? 0);
+
                     $program = $outputInfo['prg_info'][$index] ?? [];
 
-                    $channels[] = [
+                    $result[] = [
+                        'ip' => $ip,
                         'channel' => $index + 1,
                         'freq_mhz' => (float) ($channel['freq'] ?? 0),
                         'level_db' => (float) ($channel['level'] ?? 0),
@@ -68,21 +68,20 @@ final class ChannelService
                         ),
                     ];
                 }
-
-                $result[] = [
-                    'ip' => $ip,
-                    'online' => true,
-                    'channels' => $channels,
-                ];
             } catch (Throwable $e) {
-                $result[] = [
-                    'ip' => $ip,
-                    'online' => false,
-                    'channels' => [],
-                    'error' => $e->getMessage(),
-                ];
+                /*
+                * Пока просто пропускаем недоступное устройство.
+                * Позже при желании можно вывести предупреждение.
+                */
             }
         }
+
+        usort(
+            $result,
+            static function (array $a, array $b): int {
+                return ($a['freq_mhz'] <=> $b['freq_mhz']);
+            }
+        );
 
         return $result;
     }
