@@ -78,6 +78,131 @@ if (
     exit;
 }
 
+
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && post_string(
+        'ajax',
+        30
+    ) === 'database_import'
+) {
+    header(
+        'Content-Type: application/json; charset=utf-8'
+    );
+
+    header(
+        'Cache-Control: no-store'
+    );
+
+    try {
+        verify_csrf();
+
+        if (
+            !isset($_FILES['db'])
+            || !is_array($_FILES['db'])
+        ) {
+            throw new RuntimeException(
+                'Файл не передан.'
+            );
+        }
+
+        $file = $_FILES['db'];
+
+        $error = (int) (
+            $file['error']
+            ?? UPLOAD_ERR_NO_FILE
+        );
+
+        if ($error !== UPLOAD_ERR_OK) {
+            switch ($error) {
+                case UPLOAD_ERR_INI_SIZE:
+                case UPLOAD_ERR_FORM_SIZE:
+                    $message = 'Файл превышает допустимый размер.';
+                    break;
+
+                case UPLOAD_ERR_PARTIAL:
+                    $message = 'Файл был загружен не полностью.';
+                    break;
+
+                case UPLOAD_ERR_NO_FILE:
+                    $message = 'Файл не выбран.';
+                    break;
+
+                case UPLOAD_ERR_NO_TMP_DIR:
+                    $message = 'На сервере отсутствует временная директория.';
+                    break;
+
+                case UPLOAD_ERR_CANT_WRITE:
+                    $message = 'Не удалось записать файл на диск.';
+                    break;
+
+                case UPLOAD_ERR_EXTENSION:
+                    $message = 'Загрузка файла остановлена расширением PHP.';
+                    break;
+
+                default:
+                    $message = 'Ошибка загрузки файла.';
+                    break;
+            }
+
+            throw new RuntimeException(
+                $message
+            );
+        }
+
+        $tmpName = (string) (
+            $file['tmp_name']
+            ?? ''
+        );
+
+        if (
+            $tmpName === ''
+            || !is_uploaded_file($tmpName)
+        ) {
+            throw new RuntimeException(
+                'Получен некорректный загруженный файл.'
+            );
+        }
+
+        $result =
+            $subscribers->importDatabaseFile(
+                $tmpName
+            );
+
+        echo json_encode(
+            [
+                'success' => true,
+                'inserted' =>
+                    $result['inserted'],
+                'skipped' =>
+                    $result['skipped'],
+                'update' =>
+                    $result['update'],
+            ],
+            JSON_UNESCAPED_UNICODE
+            | JSON_UNESCAPED_SLASHES
+            | JSON_THROW_ON_ERROR
+        );
+    } catch (Throwable $exception) {
+        http_response_code(422);
+
+        echo json_encode(
+            [
+                'success' => false,
+                'error' =>
+                    $exception->getMessage(),
+            ],
+            JSON_UNESCAPED_UNICODE
+            | JSON_UNESCAPED_SLASHES
+            | JSON_THROW_ON_ERROR
+        );
+    }
+
+    exit;
+}
+
+
+
 if (
     $_SERVER['REQUEST_METHOD'] === 'POST'
     && post_string(
@@ -152,6 +277,10 @@ if (
 
 $subscriberDebt = 0.0;
 
+
+
+
+
 function ticket_telegram_message(
     array $ticket,
     string $action,
@@ -161,98 +290,70 @@ function ticket_telegram_message(
 ): string {
     $isWithdrawn = $action === 'withdraw';
 
-    $message = $isWithdrawn
-        ? "⛔ <b>Заявка снята</b>\n\n"
-        : "✅ <b>Заявка выполнена</b>\n\n";
-
     $abonent = trim(
-        (string) (
-            $ticket['abonent_ajax']
-            ?? $ticket['abonent']
-            ?? ''
-        )
+        (string) ($ticket['abonent'] ?? '')
     );
+
+    if ($abonent === '') {
+        $abonent = trim(
+            (string) ($ticket['abonent_ajax'] ?? '')
+        );
+    }
 
     $address = trim(
-        (string) (
-            $ticket['address_ajax']
-            ?? $ticket['address']
-            ?? ''
-        )
+        (string) ($ticket['address'] ?? '')
     );
 
-    $description = trim(
-        (string) (
-            $ticket['desc']
-            ?? ''
-        )
+    if ($address === '') {
+        $address = trim(
+            (string) ($ticket['address_ajax'] ?? '')
+        );
+    }
+
+    $id = telegram_html(
+        $ticket['id'] ?? ''
     );
 
-    $other = trim(
-        (string) (
-            $ticket['other']
-            ?? ''
-        )
-    );
-
-    $message .=
-        '<b>Заявка №:</b> '
-        . telegram_html(
-            $ticket['id'] ?? ''
-        )
-        . "\n";
+    if ($isWithdrawn) {
+        $message =
+            '⛔ <b>Заявка № '
+            . $id
+            . ' снята</b>';
+    } else {
+        $message =
+            '✅ <b>Заявка № '
+            . $id
+            . ' выполнена</b>';
+    }
 
     if ($abonent !== '') {
         $message .=
-            '<b>Абонент:</b> '
-            . telegram_html($abonent)
-            . "\n";
+            "\n"
+            . 'ФИО: '
+            . telegram_html($abonent);
     }
 
     if ($address !== '') {
         $message .=
-            '<b>Адрес:</b> '
-            . telegram_html($address)
-            . "\n";
+            "\n"
+            . 'Адрес: '
+            . telegram_html($address);
     }
 
-    if ($description !== '') {
-        $message .=
-            '<b>Описание:</b> '
-            . telegram_html($description)
-            . "\n";
-    }
-
-    if ($other !== '') {
-        $message .=
-            '<b>Дополнительно:</b> '
-            . telegram_html($other)
-            . "\n";
-    }
-
-    $message .=
-        '<b>Мастер:</b> '
-        . telegram_html($master)
-        . "\n"
-        . '<b>Результат:</b> '
-        . telegram_html($result);
-
-    if ($cost !== '') {
+    if ($result !== '') {
         $message .=
             "\n"
-            . '<b>Стоимость:</b> '
-            . telegram_html($cost);
+            . '<b>Результат:</b> '
+            . telegram_html($result);
     }
-
-    $message .=
-        "\n"
-        . '<b>Время:</b> '
-        . telegram_html(
-            date('d.m.Y H:i:s')
-        );
 
     return $message;
 }
+
+
+
+
+
 
 function connection_telegram_message(
     array $connection,
@@ -262,87 +363,57 @@ function connection_telegram_message(
 ): string {
     $isWithdrawn = $action === 'withdraw';
 
-    $message = $isWithdrawn
-        ? "⛔ <b>Подключение снято</b>\n\n"
-        : "✅ <b>Подключение завершено</b>\n\n";
-
     $abonent = trim(
-        (string) (
-            $connection['abonent']
-            ?? ''
-        )
+        (string) ($connection['abonent'] ?? '')
     );
 
     $address = trim(
-        (string) (
-            $connection['address']
-            ?? ''
-        )
+        (string) ($connection['address'] ?? '')
     );
 
-    $description = trim(
-        (string) (
-            $connection['desc']
-            ?? ''
-        )
+    $id = telegram_html(
+        (string) ($connection['id'] ?? '')
     );
 
-    $other = trim(
-        (string) (
-            $connection['other']
-            ?? ''
-        )
-    );
-
-    $message .=
-        '<b>Подключение №:</b> '
-        . telegram_html(
-            $connection['id'] ?? ''
-        )
-        . "\n";
+    if ($isWithdrawn) {
+        $message =
+            '⛔ <b>Подключение № '
+            . $id
+            . ' снято</b>';
+    } else {
+        $message =
+            '✅ <b>Подключение № '
+            . $id
+            . ' выполнено</b>';
+    }
 
     if ($abonent !== '') {
         $message .=
-            '<b>Абонент:</b> '
-            . telegram_html($abonent)
-            . "\n";
+            "\n"
+            . 'ФИО: '
+            . telegram_html($abonent);
     }
 
     if ($address !== '') {
         $message .=
-            '<b>Адрес:</b> '
-            . telegram_html($address)
-            . "\n";
+            "\n"
+            . 'Адрес: '
+            . telegram_html($address);
     }
 
-    if ($description !== '') {
+    if ($result !== '') {
         $message .=
-            '<b>Описание:</b> '
-            . telegram_html($description)
-            . "\n";
+            "\n"
+            . '<b>Результат:</b> '
+            . telegram_html($result);
     }
-
-    if ($other !== '') {
-        $message .=
-            '<b>Дополнительно:</b> '
-            . telegram_html($other)
-            . "\n";
-    }
-
-    $message .=
-        '<b>Мастер:</b> '
-        . telegram_html($master)
-        . "\n"
-        . '<b>Результат:</b> '
-        . telegram_html($result)
-        . "\n"
-        . '<b>Время:</b> '
-        . telegram_html(
-            date('d.m.Y H:i:s')
-        );
 
     return $message;
 }
+
+
+
+
 
 /*
  * Действия страницы статистики,
@@ -939,8 +1010,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $result = post_string(
                 'result',
-                50
+                44
             );
+
+            $result = trim($result)
+                . ' '
+                . date('d.m');
 
             $cost = post_string(
                 'cost',
@@ -1075,8 +1150,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $result = post_string(
                 'result',
-                50
+                44
             );
+
+            $result = trim($result)
+                . ' '
+                . date('d.m');
 
             $connections->complete(
                 $id,

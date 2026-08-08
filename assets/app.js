@@ -612,3 +612,229 @@ document.addEventListener('DOMContentLoaded', function () {
 
     applyStatusFilter();
 });
+
+
+
+
+
+
+
+
+
+
+
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
+        const form = document.getElementById(
+            'database-import-form'
+        );
+
+        const fileInput =
+            document.getElementById(
+                'database-import-file'
+            );
+
+        if (!form || !fileInput) {
+            return;
+        }
+
+        const progress =
+            document.getElementById(
+                'database-import-progress'
+            );
+
+        const progressBar =
+            document.getElementById(
+                'database-import-progress-bar'
+            );
+
+        const progressText =
+            document.getElementById(
+                'database-import-progress-text'
+            );
+
+        const progressPercent =
+            document.getElementById(
+                'database-import-progress-percent'
+            );
+
+        const result =
+            document.getElementById(
+                'database-import-result'
+            );
+
+        fileInput.addEventListener(
+            'change',
+            function () {
+                if (
+                    !fileInput.files
+                    || fileInput.files.length === 0
+                ) {
+                    return;
+                }
+
+                const body =
+                    new FormData(form);
+
+                const xhr =
+                    new XMLHttpRequest();
+
+                xhr.open(
+                    'POST',
+                    'index.php',
+                    true
+                );
+
+                /*
+                 * Во время загрузки запрещаем
+                 * повторный выбор файла.
+                 */
+                fileInput.disabled = true;
+
+                progress.hidden = false;
+                result.hidden = true;
+
+                progressBar.style.width = '0%';
+
+                progressPercent.textContent = '0%';
+
+                progressText.textContent =
+                    'Загрузка файла…';
+
+                xhr.upload.addEventListener(
+                    'progress',
+                    function (event) {
+                        if (!event.lengthComputable) {
+                            return;
+                        }
+
+                        const percent = Math.round(
+                            (
+                                event.loaded
+                                / event.total
+                            )
+                            * 100
+                        );
+
+                        progressBar.style.width =
+                            percent + '%';
+
+                        progressPercent.textContent =
+                            percent + '%';
+                    }
+                );
+
+                xhr.upload.addEventListener(
+                    'load',
+                    function () {
+                        progressBar.style.width =
+                            '100%';
+
+                        progressPercent.textContent =
+                            '100%';
+
+                        progressText.textContent =
+                            'Обработка файла…';
+                    }
+                );
+
+                xhr.addEventListener(
+                    'load',
+                    function () {
+                        let response;
+
+                        try {
+                            response =
+                                JSON.parse(
+                                    xhr.responseText
+                                );
+                        } catch (error) {
+                            showError(
+                                'Сервер вернул некорректный ответ.'
+                            );
+
+                            return;
+                        }
+
+                        if (
+                            xhr.status < 200
+                            || xhr.status >= 300
+                            || !response.success
+                        ) {
+                            showError(
+                                response.error
+                                || 'Ошибка импорта.'
+                            );
+
+                            return;
+                        }
+
+                        progressText.textContent =
+                            'Импорт завершён';
+
+                        result.hidden = false;
+
+                        result.classList.remove(
+                            'database-import-result--error'
+                        );
+
+                        result.classList.add(
+                            'database-import-result--success'
+                        );
+
+                        result.textContent =
+                            'Добавлено: '
+                            + response.inserted
+                            + ', пропущено: '
+                            + response.skipped;
+
+                        window.setTimeout(
+                            function () {
+                                window.location.href =
+                                    'index.php?module=database';
+                            },
+                            1000
+                        );
+                    }
+                );
+
+                xhr.addEventListener(
+                    'error',
+                    function () {
+                        showError(
+                            'Ошибка соединения при загрузке файла.'
+                        );
+                    }
+                );
+
+                xhr.send(body);
+
+                function showError(message) {
+                    fileInput.disabled = false;
+
+                    /*
+                     * Разрешаем выбрать тот же
+                     * самый файл ещё раз.
+                     */
+                    fileInput.value = '';
+
+                    progressText.textContent =
+                        'Ошибка';
+
+                    result.hidden = false;
+
+                    result.classList.remove(
+                        'database-import-result--success'
+                    );
+
+                    result.classList.add(
+                        'database-import-result--error'
+                    );
+
+                    result.textContent = message;
+                }
+            }
+        );
+    }
+);

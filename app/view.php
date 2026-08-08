@@ -147,7 +147,26 @@ $cssVersion = is_file($cssFile)
                     <?php endif; ?>
                     <button class="button" type="submit">Найти</button>
                 </form>
-                <?php if ($module !== 'database'): ?><button class="button primary" type="button" data-modal-open="create-modal">＋ Добавить</button><?php endif; ?>
+                <?php if ($module !== 'database'): ?>
+                    <button
+                        class="button primary"
+                        type="button"
+                        data-modal-open="create-modal"
+                    >
+                        ＋ Добавить
+                    </button>
+
+                <?php else: ?>
+
+                    <button
+                        class="button primary"
+                        type="button"
+                        data-modal-open="database-import-modal"
+                    >
+                        ↑ Импорт
+                    </button>
+
+                <?php endif; ?>
             </section>
         <?php endif; ?>
 
@@ -158,11 +177,11 @@ $cssVersion = is_file($cssFile)
                     class="card <?= is_done($row) ? 'done' : '' ?>"
                     data-status="<?= is_done($row) ? 'done' : 'open' ?>"
                 >
-                    <div class="card-head"><div><span class="id">#<?= e($row['id']) ?></span><h2><?= e($row['abonent'] ?: $row['abonent_ajax'] ?: 'Без имени') ?></h2></div><span class="status <?= is_done($row)?'status-done':'status-open' ?>"><?= is_done($row)?'Выполнена':'Открыта' ?></span></div>
+                    <div class="card-head"><div><span class="id">#<?= e($row['id']) ?></span><h2><?= e($row['abonent'] ?: $row['abonent_ajax'] ?: 'Без имени') ?></h2></div><span class="status <?= is_done($row)?'status-done':'status-open' ?>"><?= e(format_datetime($row['time'])) ?></span></div>
                     <div class="address"><?= e($row['address'] ?: $row['address_ajax'] ?: 'Адрес не указан') ?></div>
                     <p><?= e($row['desc']) ?></p>
                     <?php if ($row['other']): ?><div class="muted"><?= e($row['other']) ?></div><?php endif; ?>
-                    <dl class="meta"><div><dt>Создана</dt><dd><?= e(format_datetime($row['time'])) ?></dd></div><div><dt>Принял</dt><dd><?= e($row['who']) ?></dd></div><?php if (is_done($row)): ?><div><dt>Мастер</dt><dd><?= e($row['master']) ?></dd></div><div><dt>Результат</dt><dd><?= e($row['result']) ?></dd></div><div><dt>Стоимость</dt><dd><?= e($row['cost'] ?: '—') ?></dd></div><?php endif; ?></dl>
+                    <dl class="meta"><?php if (is_done($row)): ?><div><dt>Мастер</dt><dd><?= e($row['master']) ?></dd></div><div><dt>Результат</dt><dd><?= e($row['result']) ?></dd></div><div><dt>Стоимость</dt><dd><?= e($row['cost'] ?: '—') ?></dd></div><?php endif; ?></dl>
                     <div class="actions">
                         <?php if (!is_done($row)): ?>
                             <button
@@ -209,9 +228,9 @@ $cssVersion = is_file($cssFile)
                     class="card <?= is_done($row) ? 'done' : '' ?>"
                     data-status="<?= is_done($row) ? 'done' : 'open' ?>"
                 >
-                    <div class="card-head"><div><span class="id">#<?= e($row['id']) ?></span><h2><?= e($row['abonent'] ?: 'Без имени') ?></h2></div><span class="status <?= is_done($row)?'status-done':'status-open' ?>"><?= is_done($row)?'Завершено':'Открыто' ?></span></div>
+                    <div class="card-head"><div><span class="id">#<?= e($row['id']) ?></span><h2><?= e($row['abonent'] ?: 'Без имени') ?></h2></div><span class="status <?= is_done($row)?'status-done':'status-open' ?>"><?= e(format_datetime($row['time'])) ?></span></div>
                     <div class="address"><?= e($row['address'] ?: 'Адрес не указан') ?></div><p><?= e($row['desc']) ?></p>
-                    <dl class="meta"><div><dt>Создано</dt><dd><?= e(format_datetime($row['time'])) ?></dd></div><div><dt>Принял</dt><dd><?= e($row['who']) ?></dd></div><?php if (is_done($row)): ?><div><dt>Мастер</dt><dd><?= e($row['master']) ?></dd></div><div><dt>Результат</dt><dd><?= e($row['result']) ?></dd></div><?php endif; ?></dl>
+                    <dl class="meta"><?php if (is_done($row)): ?><div><dt>Мастер</dt><dd><?= e($row['master']) ?></dd></div><div><dt>Результат</dt><dd><?= e($row['result']) ?></dd></div><?php endif; ?></dl>
 
                     <div class="actions">
                         <?php if (!is_done($row)): ?>
@@ -2682,14 +2701,41 @@ function sortCards() {
             </label>
 
             <label>
-                Описание
+                <span>Род коммутации</span>
 
-                <input
-                    class="input"
+                <select
+                    class="input select"
                     name="description"
-                    maxlength="50"
                     required
                 >
+                    <option value="" selected disabled>
+                        Выберите действие
+                    </option>
+
+                    <option value="отключить всё">
+                        отключить всё
+                    </option>
+
+                    <option value="отключить временно">
+                        отключить временно
+                    </option>
+
+                    <option value="подключить госканалы">
+                        подключить госканалы
+                    </option>
+
+                    <option value="подключить аналоговый пакет">
+                        подключить аналоговый пакет
+                    </option>
+
+                    <option value="подключить цифровой пакет">
+                        подключить цифровой пакет
+                    </option>
+
+                    <option value="переезд на другой адрес">
+                        переезд на другой адрес
+                    </option>
+                </select>
             </label>
 
             <label>
@@ -2796,4 +2842,92 @@ function sortCards() {
 </dialog>
 
 <?php endif; ?>
+
+
+<?php if (
+    $module === 'database'
+    && $action !== 'history'
+): ?>
+
+<dialog
+    class="modal database-import-modal"
+    id="database-import-modal"
+>
+    <form
+        id="database-import-form"
+        enctype="multipart/form-data"
+    >
+        <div class="modal-head">
+            <h2>Импорт базы абонентов</h2>
+
+            <button
+                type="button"
+                class="icon-button"
+                data-modal-close
+                aria-label="Закрыть"
+            >
+                ×
+            </button>
+        </div>
+
+        <input
+            type="hidden"
+            name="csrf_token"
+            value="<?= e(csrf_token()) ?>"
+        >
+
+        <input
+            type="hidden"
+            name="ajax"
+            value="database_import"
+        >
+
+        <label>
+            Файл базы
+
+            <input
+                class="input"
+                type="file"
+                name="db"
+                id="database-import-file"
+                required
+            >
+        </label>
+
+        <div
+            class="database-import-progress"
+            id="database-import-progress"
+            hidden
+        >
+            <div class="database-import-progress__header">
+                <span id="database-import-progress-text">
+                    Загрузка…
+                </span>
+
+                <strong
+                    id="database-import-progress-percent"
+                >
+                    0%
+                </strong>
+            </div>
+
+            <div class="database-import-progress__track">
+                <div
+                    class="database-import-progress__bar"
+                    id="database-import-progress-bar"
+                ></div>
+            </div>
+        </div>
+
+        <div
+            class="database-import-result"
+            id="database-import-result"
+            hidden
+        ></div>
+    </form>
+</dialog>
+
+<?php endif; ?>
+
+
 </body></html>

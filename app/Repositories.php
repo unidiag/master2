@@ -512,6 +512,312 @@ final class SubscriberRepository
 
 
 
+
+
+
+    public function importDatabaseFile(
+        string $filename
+    ): array {
+        if (
+            $filename === ''
+            || !is_file($filename)
+            || !is_readable($filename)
+        ) {
+            throw new RuntimeException(
+                'Не удалось прочитать загруженный файл.'
+            );
+        }
+
+        $contents = file_get_contents($filename);
+
+        if ($contents === false) {
+            throw new RuntimeException(
+                'Не удалось прочитать содержимое файла.'
+            );
+        }
+
+        /*
+        * Старый экспорт приходит в Windows-1251.
+        */
+        $converted = iconv(
+            'Windows-1251',
+            'UTF-8//IGNORE',
+            $contents
+        );
+
+        if ($converted === false) {
+            throw new RuntimeException(
+                'Не удалось преобразовать файл из Windows-1251.'
+            );
+        }
+
+        /*
+        * Разбираем любые варианты CRLF / LF / CR.
+        */
+        $lines = preg_split(
+            '/\R/u',
+            $converted
+        );
+
+        if ($lines === false || !$lines) {
+            throw new RuntimeException(
+                'Файл не содержит данных.'
+            );
+        }
+
+        $update = time();
+
+        $insert = $this->db->prepare(
+            'INSERT INTO master_database (
+                personal,
+                account,
+                address,
+                period,
+                summ,
+                tarif_id,
+                tarif,
+                time,
+                `update`
+            ) VALUES (
+                :personal,
+                :account,
+                :address,
+                :period,
+                :summ,
+                :tarif_id,
+                :tarif,
+                :time,
+                :update
+            )'
+        );
+
+        $inserted = 0;
+        $skipped = 0;
+
+        $this->db->beginTransaction();
+
+        try {
+            foreach ($lines as $index => $line) {
+                /*
+                * Первая строка — заголовок.
+                */
+                if ($index === 0) {
+                    continue;
+                }
+
+                $line = trim($line);
+
+                if ($line === '') {
+                    continue;
+                }
+
+                $fields = explode(
+                    '^',
+                    $line
+                );
+
+                /*
+                * Старый формат использует как минимум
+                * поля до индекса 11 включительно.
+                */
+                if (count($fields) < 12) {
+                    $skipped++;
+                    continue;
+                }
+
+                $personal = trim(
+                    (string) $fields[1]
+                );
+
+                $account = trim(
+                    (string) $fields[2]
+                );
+
+                $address = trim(
+                    (string) $fields[3]
+                );
+
+                $period = trim(
+                    (string) $fields[4]
+                );
+
+                $summ = $this->normalizeImportedSum(
+                    (string) $fields[5]
+                );
+
+                $time = $this->parseImportedDate(
+                    (string) $fields[7]
+                );
+
+                $tariffId = trim(
+                    (string) $fields[10]
+                );
+
+                $tariff = trim(
+                    (string) $fields[11]
+                );
+
+                /*
+                * Лицевой счёт и адрес считаем
+                * минимально необходимыми данными.
+                */
+                if (
+                    $personal === ''
+                    && $address === ''
+                ) {
+                    $skipped++;
+                    continue;
+                }
+
+                $insert->execute([
+                    'personal' => $personal,
+                    'account' => $account,
+                    'address' => $address,
+                    'period' => $period,
+                    'summ' => $summ,
+                    'tarif_id' => $tariffId,
+                    'tarif' => $tariff,
+                    'time' => $time,
+                    'update' => $update,
+                ]);
+
+                $inserted++;
+            }
+
+            if ($inserted === 0) {
+                throw new RuntimeException(
+                    'В файле не найдено ни одной корректной записи.'
+                );
+            }
+
+            $this->db->commit();
+        } catch (Throwable $exception) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+
+            throw $exception;
+        }
+
+        return [
+            'inserted' => $inserted,
+            'skipped' => $skipped,
+            'update' => $update,
+        ];
+    }
+
+    private function parseImportedDate(
+        string $value
+    ): int {
+        /*
+        * Старый формат:
+        *
+        * YYYYMMDDHHMMSS
+        */
+        $value = trim($value);
+
+        if (
+            strlen($value) < 14
+            || !ctype_digit(
+                substr($value, 0, 14)
+            )
+        ) {
+            return 0;
+        }
+
+        $year = (int) substr(
+            $value,
+            0,
+            4
+        );
+
+        $month = (int) substr(
+            $value,
+            4,
+            2
+        );
+
+        $day = (int) substr(
+            $value,
+            6,
+            2
+        );
+
+        $hour = (int) substr(
+            $value,
+            8,
+            2
+        );
+
+        $minute = (int) substr(
+            $value,
+            10,
+            2
+        );
+
+        $second = (int) substr(
+            $value,
+            12,
+            2
+        );
+
+        if (
+            !checkdate(
+                $month,
+                $day,
+                $year
+            )
+        ) {
+            return 0;
+        }
+
+        return mktime(
+            $hour,
+            $minute,
+            $second,
+            $month,
+            $day,
+            $year
+        );
+    }
+
+
+private function normalizeImportedSum(
+    string $value
+): int {
+    $value = trim($value);
+
+    if ($value === '') {
+        return 0;
+    }
+
+    $value = str_replace(
+        [
+            ' ',
+            "\xC2\xA0",
+            ',',
+        ],
+        [
+            '',
+            '',
+            '.',
+        ],
+        $value
+    );
+
+    if (!is_numeric($value)) {
+        return 0;
+    }
+
+    return (int) round(
+        (float) $value * 10000
+    );
+}
+
+
+
+
+
     public function cleanupOlderThanOneYear(
         int $batchSize = 5000
     ): int {
