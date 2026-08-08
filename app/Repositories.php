@@ -682,7 +682,40 @@ final class SubscriberRepository
         foreach ($houses as &$house) {
             $house['debt'] = $house['debt_raw'] / 10000;
         }
+
+        $controlsStatement = $this->db->query(
+            'SELECT house, control
+            FROM master_doma
+            WHERE control IS NOT NULL'
+        );
+
+        $controls = [];
+
+        while (
+            $controlRow = $controlsStatement->fetch(
+                PDO::FETCH_ASSOC
+            )
+        ) {
+            $controlHouse = trim(
+                (string) ($controlRow['house'] ?? '')
+            );
+
+            if ($controlHouse === '') {
+                continue;
+            }
+
+            $controls[$controlHouse] = trim(
+                (string) ($controlRow['control'] ?? '')
+            );
+        }
+
+        foreach ($houses as $houseName => &$house) {
+            $house['control'] =
+                $controls[$houseName] ?? '';
+        }
+
         unset($house);
+
 
         uksort($houses, 'strnatcasecmp');
 

@@ -1595,7 +1595,7 @@ elseif ($module === 'stat'): ?>
                             <?= e(
                                 (new DateTimeImmutable(
                                     $houseControl
-                                ))->format('d.m.Y')
+                                ))->format('d.m.Y H:i:s')
                             ) ?>
 
                         <?php else: ?>
@@ -1824,6 +1824,8 @@ elseif ($module === 'stat'): ?>
 <?php else: ?>
 
 
+
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const select = document.getElementById('house-sort');
@@ -1833,49 +1835,159 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
+    const cookieName = 'master_house_sort';
+
+    const allowedSorts = [
+        'default',
+        'debt',
+        'penetration',
+        'control'
+    ];
+
     const cards = Array.from(
         grid.querySelectorAll('.house-card-link')
     );
 
+    const savedSort = getCookie(cookieName);
+
+    if (
+        savedSort
+        && allowedSorts.includes(savedSort)
+    ) {
+        select.value = savedSort;
+    }
+
     select.addEventListener('change', function () {
-        const sortedCards = cards.slice();
+        setCookie(
+            cookieName,
+            select.value,
+            365
+        );
 
-        if (select.value === 'debt') {
-            sortedCards.sort(function (a, b) {
-                const debtA = parseFloat(a.dataset.debt) || 0;
-                const debtB = parseFloat(b.dataset.debt) || 0;
-
-                if (debtB !== debtA) {
-                    return debtB - debtA;
-                }
-
-                return compareHouses(a, b);
-            });
-        } else if (select.value === 'penetration') {
-            sortedCards.sort(function (a, b) {
-                const penetrationA =
-                    parseFloat(a.dataset.penetration) || 0;
-
-                const penetrationB =
-                    parseFloat(b.dataset.penetration) || 0;
-
-                if (penetrationB !== penetrationA) {
-                    return penetrationB - penetrationA;
-                }
-
-                return compareHouses(a, b);
-            });
-        } else {
-            sortedCards.sort(compareHouses);
-        }
-
-        sortedCards.forEach(function (card) {
-            grid.appendChild(card);
-        });
+        sortCards();
     });
 
+
+
+function sortCards() {
+    const sortedCards = cards.slice();
+
+    /*
+     * По умолчанию показываем все дома.
+     * При сортировке "По контролю"
+     * неактивные будут скрыты ниже.
+     */
+    cards.forEach(function (card) {
+        card.hidden = false;
+    });
+
+    if (select.value === 'debt') {
+        sortedCards.sort(function (a, b) {
+            const debtA =
+                parseFloat(a.dataset.debt) || 0;
+
+            const debtB =
+                parseFloat(b.dataset.debt) || 0;
+
+            if (debtB !== debtA) {
+                return debtB - debtA;
+            }
+
+            return compareHouses(a, b);
+        });
+    } else if (select.value === 'penetration') {
+        sortedCards.sort(function (a, b) {
+            const penetrationA =
+                parseFloat(
+                    a.dataset.penetration
+                ) || 0;
+
+            const penetrationB =
+                parseFloat(
+                    b.dataset.penetration
+                ) || 0;
+
+            if (
+                penetrationB !== penetrationA
+            ) {
+                return (
+                    penetrationB
+                    - penetrationA
+                );
+            }
+
+            return compareHouses(a, b);
+        });
+    } else if (select.value === 'control') {
+        sortedCards.sort(function (a, b) {
+            const controlA =
+                parseInt(
+                    a.dataset.control || '0',
+                    10
+                );
+
+            const controlB =
+                parseInt(
+                    b.dataset.control || '0',
+                    10
+                );
+
+            /*
+             * Дома без контроля —
+             * в самом начале.
+             */
+            if (
+                controlA === 0
+                && controlB !== 0
+            ) {
+                return -1;
+            }
+
+            if (
+                controlB === 0
+                && controlA !== 0
+            ) {
+                return 1;
+            }
+
+            /*
+             * Затем от самого старого
+             * контроля к самому свежему.
+             */
+            if (controlA !== controlB) {
+                return controlA - controlB;
+            }
+
+            return compareHouses(a, b);
+        });
+    } else {
+        sortedCards.sort(compareHouses);
+    }
+
+    sortedCards.forEach(function (card) {
+        /*
+         * При сортировке по контролю
+         * не показываем неактивные дома.
+         */
+        if (
+            select.value === 'control'
+            && card.querySelector(
+                '.house-card--inactive'
+            )
+        ) {
+            card.hidden = true;
+        }
+
+        grid.appendChild(card);
+    });
+}
+
+
+
     function compareHouses(a, b) {
-        return (a.dataset.house || '').localeCompare(
+        return (
+            a.dataset.house || ''
+        ).localeCompare(
             b.dataset.house || '',
             'ru',
             {
@@ -1884,8 +1996,67 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         );
     }
+
+    function getCookie(name) {
+        const prefix =
+            encodeURIComponent(name) + '=';
+
+        const cookies =
+            document.cookie.split(';');
+
+        for (
+            let index = 0;
+            index < cookies.length;
+            index++
+        ) {
+            const cookie =
+                cookies[index].trim();
+
+            if (
+                cookie.indexOf(prefix) === 0
+            ) {
+                return decodeURIComponent(
+                    cookie.substring(
+                        prefix.length
+                    )
+                );
+            }
+        }
+
+        return '';
+    }
+
+    function setCookie(
+        name,
+        value,
+        days
+    ) {
+        const expires = new Date();
+
+        expires.setTime(
+            expires.getTime()
+            + days * 24 * 60 * 60 * 1000
+        );
+
+        document.cookie =
+            encodeURIComponent(name)
+            + '='
+            + encodeURIComponent(value)
+            + '; expires='
+            + expires.toUTCString()
+            + '; path=/'
+            + '; SameSite=Lax';
+    }
+
+    /*
+     * Сразу применяем сортировку,
+     * восстановленную из cookie.
+     */
+    sortCards();
 });
 </script>
+
+
 
 
     <?php
@@ -1955,6 +2126,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <option value="default">По умолчанию</option>
                 <option value="debt">По общей задолженности</option>
                 <option value="penetration">По проникновению</option>
+                <option value="control">По контролю</option>
             </select>
         </div>
 
@@ -1998,6 +2170,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 $debt = (float) ($house['debt'] ?? 0);
                 $debtors = (int) ($house['debtors'] ?? 0);
 
+                $control = trim(
+                    (string) ($house['control'] ?? '')
+                );
+
+                $controlTimestamp = $control !== ''
+                    ? strtotime($control)
+                    : 0;
+
+                if ($controlTimestamp === false) {
+                    $controlTimestamp = 0;
+                }
+
                 $stateChannels = (int) ($house['state_channels'] ?? 0);
                 $analogPackage = (int) ($house['analog_package'] ?? 0);
                 $digitalPackage = (int) ($house['digital_package'] ?? 0);
@@ -2026,6 +2210,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     data-house="<?= e(mb_strtolower((string) ($house['house'] ?? ''), 'UTF-8')) ?>"
                     data-debt="<?= e(number_format($debt, 2, '.', '')) ?>"
                     data-penetration="<?= e($penetrationWidth) ?>"
+                    data-control="<?= e((string) $controlTimestamp) ?>"
                 >
                     <article class="house-card<?= $isEmptyHouse ? ' house-card--inactive' : '' ?>">
                     <?php
@@ -2075,12 +2260,26 @@ document.addEventListener('DOMContentLoaded', function () {
                         <?php
                         $karandashCount = (int) ($house['karandash'] ?? 0);
                         
-                        if ($debt > 0): ?>
+                        if (
+                            $debt > 0
+                            || $controlTimestamp > 0
+                        ): ?>
                             <div class="house-card__debt">
-                                <strong>
-                                    <?= e(number_format($debt, 2, ',', ' ')) ?>
-                                    <small>(<?= e($debtors) ?> аб.)</small>
-                                </strong>
+                                <?php if ($debt > 0): ?>
+                                    <strong>
+                                        <?= e(number_format($debt, 2, ',', ' ')) ?>
+                                        <small>(<?= e($debtors) ?> аб.)</small>
+                                    </strong>
+                                <?php endif; ?>
+
+                                <?php if ($controlTimestamp > 0): ?>
+                                    <div class="house-card__control">
+                                        <?= e(date(
+                                            'd.m.Y',
+                                            $controlTimestamp
+                                        )) ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         <?php endif; ?>
                         <?php if ($karandashCount > 0): ?>
