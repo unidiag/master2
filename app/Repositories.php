@@ -263,6 +263,43 @@ final class HouseRepository
         $statement->execute();
     }
 
+
+
+    public function saveDescr(
+        string $house,
+        string $descr
+    ): void {
+        $house = trim($house);
+        $descr = trim($descr);
+
+        if ($house === '') {
+            throw new InvalidArgumentException(
+                'Название дома не указано.'
+            );
+        }
+
+        $statement = $this->db->prepare(
+            'INSERT INTO master_doma (
+                house,
+                group_size,
+                descr
+            ) VALUES (
+                :house,
+                4,
+                :descr
+            )
+            ON DUPLICATE KEY UPDATE
+                descr = VALUES(descr),
+                updated_at = CURRENT_TIMESTAMP'
+        );
+
+        $statement->execute([
+            'house' => $house,
+            'descr' => $descr,
+        ]);
+    }
+
+
     public function control(string $house): string
     {
         $house = trim($house);

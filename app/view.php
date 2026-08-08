@@ -22,10 +22,15 @@ declare(strict_types=1);
 /** @var string $subscriberTariff */
 /** @var string $subscriberOnKarandash */
 /** @var string $subscriberKarandashDescr */
+/** @var string $houseDescr */
 /** @var float $subscriberDebt */
 $subscriberDebt = isset($subscriberDebt)
     ? (float) $subscriberDebt
     : 0.0;
+
+$houseDescr = isset($houseDescr)
+    ? trim((string) $houseDescr)
+    : '';
 
 ?>
 <!doctype html>
@@ -1412,17 +1417,54 @@ elseif ($module === 'stat'): ?>
 <?php elseif ($module === 'stat' && $house !== ''): ?>
     <section class="apartments-page">
         <div class="page-heading apartments-heading">
-            <div>
-                <a class="apartments-heading__back" href="?module=stat">
-                    ← Все дома
-                </a>
 
-                <h1><?= e($house) ?></h1>
+            <div class="apartments-heading__top">
 
-                <div class="page-heading__counter">
-                    <?= e(number_format(count($apartments), 0, ',', ' ')) ?>
-                    квартир
+                <div class="apartments-heading__title">
+                    <a
+                        class="apartments-heading__back"
+                        href="?module=stat"
+                    >
+                        ← Все дома
+                    </a>
+
+                    <h1><?= e($house) ?></h1>
+
+                    <div class="page-heading__counter">
+                        <?= e(number_format(
+                            count($apartments),
+                            0,
+                            ',',
+                            ' '
+                        )) ?>
+                        квартир
+                    </div>
                 </div>
+
+                <button
+                    type="button"
+                    class="house-note<?= $houseDescr === ''
+                        ? ' house-note--empty'
+                        : ''
+                    ?>"
+                    data-modal-open="house-descr-modal"
+                    title="<?= e(
+                        $houseDescr !== ''
+                            ? $houseDescr
+                            : 'Нет инфо'
+                    ) ?>"
+                >
+                    <span class="house-note__icon">✎</span>
+
+                    <span class="house-note__text">
+                        <?= e(
+                            $houseDescr !== ''
+                                ? $houseDescr
+                                : 'Нет инфо'
+                        ) ?>
+                    </span>
+                </button>
+
             </div>
 
             <div class="apartments-heading__controls">
@@ -1471,6 +1513,78 @@ elseif ($module === 'stat'): ?>
                 </label>
             </div>
         </div>
+
+        <dialog
+            class="modal house-descr-modal"
+            id="house-descr-modal"
+        >
+            <form method="post">
+                <div class="modal-head">
+                    <h2>Информация по дому</h2>
+
+                    <button
+                        type="button"
+                        class="icon-button"
+                        data-modal-close
+                        aria-label="Закрыть"
+                    >
+                        ×
+                    </button>
+                </div>
+
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= e(csrf_token()) ?>"
+                >
+
+                <input
+                    type="hidden"
+                    name="action"
+                    value="house_descr"
+                >
+
+                <input
+                    type="hidden"
+                    name="house"
+                    value="<?= e($house) ?>"
+                >
+
+                <div class="house-descr-modal__house">
+                    <span>Дом</span>
+                    <strong><?= e($house) ?></strong>
+                </div>
+
+                <label>
+                    Заметка
+
+                    <textarea
+                        class="input house-descr-modal__textarea"
+                        name="descr"
+                        rows="7"
+                        maxlength="2000"
+                        placeholder="Коды домофонов, доступ, оборудование и другая информация"
+                    ><?= e($houseDescr) ?></textarea>
+                </label>
+
+                <div class="modal-actions">
+                    <button
+                        type="button"
+                        class="button"
+                        data-modal-close
+                    >
+                        Отмена
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="button primary"
+                    >
+                        Сохранить
+                    </button>
+                </div>
+            </form>
+        </dialog>
 
     <?php if (!$apartments): ?>
         <div class="empty-state">

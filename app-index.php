@@ -364,6 +364,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         30
     );
 
+
+
+    /*
+    * Заметка по дому.
+    */
+    if ($postAction === 'house_descr') {
+        verify_csrf();
+
+        $house = post_string(
+            'house',
+            255
+        );
+
+        $descr = post_string(
+            'descr',
+            2000
+        );
+
+        if ($house === '') {
+            flash(
+                'error',
+                'Название дома не указано.'
+            );
+
+            redirect([
+                'module' => 'stat',
+            ]);
+        }
+
+        try {
+            $housesRepository->saveDescr(
+                $house,
+                $descr
+            );
+
+            flash(
+                'success',
+                $descr !== ''
+                    ? 'Информация по дому сохранена.'
+                    : 'Информация по дому удалена.'
+            );
+        } catch (Throwable $exception) {
+            flash(
+                'error',
+                $exception->getMessage()
+            );
+        }
+
+        redirect([
+            'module' => 'stat',
+            'house' => $house,
+        ]);
+    }
+
+
+
     /*
      * Контроль дома.
      */
