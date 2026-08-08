@@ -45,13 +45,19 @@ $cssFile = __DIR__ . '/../assets/app.css';
 $cssVersion = is_file($cssFile)
     ? filemtime($cssFile)
     : time();
+
+
+$jsFile = __DIR__ . '/../assets/app.js';
+$jsVersion = is_file($jsFile)
+    ? filemtime($jsFile)
+    : time();    
 ?>
 
 <link
     rel="stylesheet"
     href="assets/app.css?v=<?= e((string) $cssVersion) ?>"
 >
-    <script src="assets/app.js?v=<?= e((string) $cssVersion) ?>" defer></script>
+    <script src="assets/app.js?v=<?= e((string) $jsVersion) ?>" defer></script>
 </head>
 <body>
 
@@ -2538,9 +2544,8 @@ function sortCards() {
             >
 
             <div class="ticket-create-form__person">
-                <label class="subscriber-autocomplete">
+                <label>
                     <span>Адрес абонента</span>
-
                     <input
                         class="input"
                         type="text"
@@ -2549,23 +2554,12 @@ function sortCards() {
                         required
                         autocomplete="off"
                         data-subscriber-address
-                        aria-autocomplete="list"
-                        aria-expanded="false"
-                        aria-controls="subscriber-suggestions"
+                        placeholder="Начните вводить улицу"
                     >
-
-                    <div
-                        class="subscriber-suggestions"
-                        id="subscriber-suggestions"
-                        data-subscriber-suggestions
-                        role="listbox"
-                        hidden
-                    ></div>
                 </label>
 
                 <label>
                     <span>ФИО</span>
-
                     <input
                         class="input"
                         type="text"
@@ -2577,6 +2571,30 @@ function sortCards() {
                     >
                 </label>
             </div>
+
+            <div
+                class="ticket-subscriber-info"
+                data-subscriber-info
+                hidden
+            >
+                <div class="ticket-subscriber-info__item">
+                    <span>Тариф</span>
+                    <button
+                        type="button"
+                        class="ticket-subscriber-tariff"
+                        data-subscriber-tariff
+                        title="Добавить тариф в примечание"
+                    >
+                        —
+                    </button>
+                </div>
+
+                <div class="ticket-subscriber-info__item">
+                    <span>Задолженность</span>
+                    <strong data-subscriber-debt>—</strong>
+                </div>
+            </div>
+
 
             <label>
                 <span>Описание заявки</span>

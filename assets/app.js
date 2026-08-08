@@ -1,4 +1,5 @@
 let pageLoading = false;
+let previousAddressValue = '';
 
 function showPageLoader() {
   if (pageLoading) {
@@ -264,7 +265,14 @@ document
 
 
 
-  const ticketCreateForm = document.querySelector(
+
+
+
+
+
+
+
+const ticketCreateForm = document.querySelector(
   '[data-ticket-create-form]'
 );
 
@@ -277,156 +285,178 @@ if (ticketCreateForm instanceof HTMLFormElement) {
     '[data-subscriber-name]'
   );
 
-  const suggestions = ticketCreateForm.querySelector(
-    '[data-subscriber-suggestions]'
+  const subscriberInfo = ticketCreateForm.querySelector(
+    '[data-subscriber-info]'
   );
 
-  let searchTimer = 0;
-  let requestController = null;
-  let selectedIndex = -1;
-  let currentItems = [];
+  const tariffElement = ticketCreateForm.querySelector(
+    '[data-subscriber-tariff]'
+  );
 
-  const closeSuggestions = () => {
-    if (!(suggestions instanceof HTMLElement)) {
+  const debtElement = ticketCreateForm.querySelector(
+    '[data-subscriber-debt]'
+  );
+
+  const noteInput = ticketCreateForm.querySelector(
+    '[name="other"]'
+  );
+
+  const streets = [
+    'Заводская-',
+    'Молодёжный-',
+    'Набережная-',
+    'Озмителя-',
+    'Панчука-',
+    'Энергетиков-',
+  ];
+
+  let lookupTimer = 0;
+  let requestController = null;
+  let lastLookupAddress = '';
+
+
+  const ticketCreateDialog = ticketCreateForm.closest('dialog');
+
+  if (ticketCreateDialog instanceof HTMLDialogElement) {
+    ticketCreateDialog.addEventListener('toggle', () => {
+      if (!ticketCreateDialog.open) {
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        if (addressInput instanceof HTMLInputElement) {
+          addressInput.focus();
+        }
+      });
+    });
+  }
+
+
+
+  const clearSubscriber = () => {
+    if (nameInput instanceof HTMLInputElement) {
+      nameInput.value = '';
+    }
+
+    if (tariffElement instanceof HTMLElement) {
+      tariffElement.textContent = '—';
+    }
+
+    if (debtElement instanceof HTMLElement) {
+      debtElement.textContent = '—';
+    }
+
+    if (subscriberInfo instanceof HTMLElement) {
+      subscriberInfo.hidden = true;
+    }
+
+    lastLookupAddress = '';
+  };
+
+  const normalizeStreet = () => {
+    if (!(addressInput instanceof HTMLInputElement)) {
       return;
     }
 
-    suggestions.hidden = true;
-    suggestions.replaceChildren();
-    currentItems = [];
-    selectedIndex = -1;
+    const value = addressInput.value.trim();
 
-    addressInput?.setAttribute(
-      'aria-expanded',
-      'false'
+    if (value.length !== 1) {
+      return;
+    }
+
+    const firstLetter = value.toLocaleLowerCase('ru-RU');
+
+    const street = streets.find((item) =>
+      item
+        .charAt(0)
+        .toLocaleLowerCase('ru-RU') === firstLetter
+    );
+
+    if (!street) {
+      return;
+    }
+
+    addressInput.value = street;
+
+    addressInput.setSelectionRange(
+      street.length,
+      street.length
     );
   };
 
-  const selectSubscriber = (item) => {
+  const isCompleteAddress = (address) => {
+    return /^(Заводская|Молодёжный|Набережная|Озмителя|Панчука|Энергетиков)-[^-]+-[^-]+$/u
+      .test(address);
+  };
+
+  const renderSubscriber = (subscriber) => {
     if (
-      !(addressInput instanceof HTMLInputElement)
-      || !(nameInput instanceof HTMLInputElement)
+      !(nameInput instanceof HTMLInputElement)
+      || !subscriber
     ) {
       return;
     }
 
-    addressInput.value = item.address || '';
-    nameInput.value = item.name || '';
+    nameInput.value = subscriber.name || '';
 
-    closeSuggestions();
+    if (tariffElement instanceof HTMLElement) {
+      tariffElement.textContent =
+        subscriber.tariff || '—';
+    }
 
-    if (nameInput.value === '') {
-      nameInput.focus();
+    if (debtElement instanceof HTMLElement) {
+      const debt = Number(subscriber.debt || 0);
+
+      debtElement.textContent =
+        debt.toLocaleString(
+          'ru-RU',
+          {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }
+        ) + ' руб.';
+    }
+
+    if (subscriberInfo instanceof HTMLElement) {
+      subscriberInfo.hidden = false;
     }
   };
 
-  const setActiveSuggestion = (index) => {
-    if (!(suggestions instanceof HTMLElement)) {
+
+  tariffElement?.addEventListener('click', () => {
+    if (
+      !(tariffElement instanceof HTMLElement)
+      || !(noteInput instanceof HTMLInputElement)
+    ) {
       return;
     }
 
-    const buttons = suggestions.querySelectorAll(
-      '[data-subscriber-suggestion]'
+    const tariff = tariffElement.textContent?.trim();
+
+    if (!tariff || tariff === '—') {
+      return;
+    }
+
+    const current = noteInput.value.trim();
+
+    noteInput.value = current
+      ? `${current}; ${tariff}`
+      : tariff;
+
+    noteInput.focus();
+
+    noteInput.setSelectionRange(
+      noteInput.value.length,
+      noteInput.value.length
     );
+  });
 
-    if (buttons.length === 0) {
-      selectedIndex = -1;
+
+  const lookupSubscriber = async (address) => {
+    if (address === lastLookupAddress) {
       return;
     }
 
-    selectedIndex = Math.max(
-      0,
-      Math.min(index, buttons.length - 1)
-    );
-
-    buttons.forEach((button, buttonIndex) => {
-      const active = buttonIndex === selectedIndex;
-
-      button.classList.toggle(
-        'is-active',
-        active
-      );
-
-      button.setAttribute(
-        'aria-selected',
-        active ? 'true' : 'false'
-      );
-    });
-
-    buttons[selectedIndex]?.scrollIntoView({
-      block: 'nearest',
-    });
-  };
-
-  const renderSuggestions = (items) => {
-    if (!(suggestions instanceof HTMLElement)) {
-      return;
-    }
-
-    suggestions.replaceChildren();
-    currentItems = items;
-    selectedIndex = -1;
-
-    if (items.length === 0) {
-      closeSuggestions();
-      return;
-    }
-
-    items.forEach((item, index) => {
-      const button = document.createElement('button');
-
-      button.type = 'button';
-      button.className = 'subscriber-suggestion';
-      button.dataset.subscriberSuggestion = String(index);
-      button.setAttribute('role', 'option');
-      button.setAttribute('aria-selected', 'false');
-
-      const address = document.createElement('strong');
-      address.textContent = item.address || '';
-
-      const details = document.createElement('span');
-
-      const detailParts = [];
-
-      if (item.name) {
-        detailParts.push(item.name);
-      }
-
-      if (item.personal) {
-        detailParts.push(`л/с ${item.personal}`);
-      }
-
-      details.textContent = detailParts.join(' · ');
-
-      button.append(address);
-
-      if (details.textContent !== '') {
-        button.append(details);
-      }
-
-      button.addEventListener('mousedown', (event) => {
-        /*
-         * Не даём input потерять focus раньше выбора.
-         */
-        event.preventDefault();
-      });
-
-      button.addEventListener('click', () => {
-        selectSubscriber(item);
-      });
-
-      suggestions.append(button);
-    });
-
-    suggestions.hidden = false;
-
-    addressInput?.setAttribute(
-      'aria-expanded',
-      'true'
-    );
-  };
-
-  const loadSuggestions = async (query) => {
     requestController?.abort();
     requestController = new AbortController();
 
@@ -436,17 +466,20 @@ if (ticketCreateForm instanceof HTMLFormElement) {
 
     url.search = '';
     url.hash = '';
+
     url.searchParams.set(
       'module',
       'zayavki'
     );
+
     url.searchParams.set(
       'ajax',
-      'subscriber_search'
+      'subscriber_lookup'
     );
+
     url.searchParams.set(
-      'query',
-      query
+      'address',
+      address
     );
 
     try {
@@ -467,100 +500,88 @@ if (ticketCreateForm instanceof HTMLFormElement) {
 
       const data = await response.json();
 
-      renderSuggestions(
-        Array.isArray(data.items)
-          ? data.items.slice(0, 10)
-          : []
-      );
+      lastLookupAddress = address;
+
+      if (
+        data.found
+        && data.subscriber
+      ) {
+        renderSubscriber(
+          data.subscriber
+        );
+
+        return;
+      }
+
+      clearSubscriber();
     } catch (error) {
       if (error.name === 'AbortError') {
         return;
       }
 
       console.error(
-        'Не удалось загрузить адреса',
+        'Не удалось получить данные абонента',
         error
       );
 
-      closeSuggestions();
+      clearSubscriber();
     }
   };
 
   addressInput?.addEventListener('input', () => {
-    const query = addressInput.value.trim();
+    window.clearTimeout(lookupTimer);
 
-    window.clearTimeout(searchTimer);
+    requestController?.abort();
 
-    if (query.length < 2) {
-      requestController?.abort();
-      closeSuggestions();
+    const currentValue = addressInput.value;
+    const isTypingFirstCharacter =
+      previousAddressValue.length === 0 &&
+      currentValue.length === 1;
+
+    if (isTypingFirstCharacter) {
+      normalizeStreet();
+    }
+
+    const address = addressInput.value.trim();
+
+    previousAddressValue = addressInput.value;
+
+    clearSubscriber();
+
+    if (!isCompleteAddress(address)) {
       return;
     }
 
-    searchTimer = window.setTimeout(() => {
-      loadSuggestions(query);
-    }, 250);
-  });
-
-  addressInput?.addEventListener('keydown', (event) => {
-    if (
-      !(suggestions instanceof HTMLElement)
-      || suggestions.hidden
-    ) {
-      return;
-    }
-
-    if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      setActiveSuggestion(selectedIndex + 1);
-      return;
-    }
-
-    if (event.key === 'ArrowUp') {
-      event.preventDefault();
-
-      setActiveSuggestion(
-        selectedIndex <= 0
-          ? currentItems.length - 1
-          : selectedIndex - 1
-      );
-
-      return;
-    }
-
-    if (
-      event.key === 'Enter'
-      && selectedIndex >= 0
-      && currentItems[selectedIndex]
-    ) {
-      event.preventDefault();
-
-      selectSubscriber(
-        currentItems[selectedIndex]
-      );
-
-      return;
-    }
-
-    if (event.key === 'Escape') {
-      closeSuggestions();
-    }
-  });
-
-  document.addEventListener('click', (event) => {
-    if (!ticketCreateForm.contains(event.target)) {
-      closeSuggestions();
-    }
+    lookupTimer = window.setTimeout(() => {
+      lookupSubscriber(address);
+    }, 150);
   });
 
   ticketCreateForm
     .closest('dialog')
     ?.addEventListener('close', () => {
+      window.clearTimeout(lookupTimer);
       requestController?.abort();
-      closeSuggestions();
+
       ticketCreateForm.reset();
+
+      previousAddressValue = '';
+
+      clearSubscriber();
     });
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

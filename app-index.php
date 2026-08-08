@@ -53,22 +53,23 @@ $houseDescr = '';
 
 if (
     $_SERVER['REQUEST_METHOD'] === 'GET'
-    && get_string('ajax', 30) === 'subscriber_search'
+    && get_string('ajax', 30) === 'subscriber_lookup'
 ) {
-    $query = get_string('query', 100);
+    $address = get_string('address', 100);
 
     header(
         'Content-Type: application/json; charset=utf-8'
     );
-
     header('Cache-Control: no-store');
+
+    $subscriber = $subscribers->findLatestByAddress(
+        $address
+    );
 
     echo json_encode(
         [
-            'items' => $subscribers->addressSuggestions(
-                $query,
-                10
-            ),
+            'found' => $subscriber !== null,
+            'subscriber' => $subscriber,
         ],
         JSON_UNESCAPED_UNICODE
         | JSON_UNESCAPED_SLASHES

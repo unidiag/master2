@@ -855,102 +855,61 @@ private function normalizeImportedSum(
 
 
 
+    public function findLatestByAddress(string $address): ?array
+    {
+        $address = trim($address);
 
-    public function addressSuggestions(
-        string $search,
-        int $limit = 10
-    ): array {
-        $search = trim($search);
-        $limit = max(1, min(10, $limit));
-
-        if (mb_strlen($search, 'UTF-8') < 2) {
-            return [];
-        }
-
-        $update = $this->latestUpdate();
-
-        if ($update === '') {
-            return [];
+        if ($address === '') {
+            return null;
         }
 
         $statement = $this->db->prepare(
             'SELECT
+                id,
                 address,
                 account,
-                personal
+                tarif,
+                summ,
+                `update`
             FROM master_database
-            WHERE `update` = :update
-            AND address LIKE :search
-            AND TRIM(address) <> \'\'
+            WHERE address = :address
             ORDER BY
                 CASE
-                    WHEN address LIKE :prefix THEN 0
-                    ELSE 1
-                END,
-                address ASC,
+                    WHEN `update` REGEXP \'^[0-9]+$\'
+                    THEN CAST(`update` AS UNSIGNED)
+                    ELSE 0
+                END DESC,
                 id DESC
-            LIMIT :limit'
+            LIMIT 1'
         );
 
-        $statement->bindValue(
-            ':update',
-            $update,
-            PDO::PARAM_STR
-        );
+        $statement->execute([
+            'address' => $address,
+        ]);
 
-        $statement->bindValue(
-            ':search',
-            '%' . $search . '%',
-            PDO::PARAM_STR
-        );
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
 
-        $statement->bindValue(
-            ':prefix',
-            $search . '%',
-            PDO::PARAM_STR
-        );
-
-        $statement->bindValue(
-            ':limit',
-            $limit,
-            PDO::PARAM_INT
-        );
-
-        $statement->execute();
-
-        $result = [];
-        $seenAddresses = [];
-
-        while ($row = $statement->fetch(PDO::FETCH_ASSOC)) {
-            $address = trim(
-                (string) ($row['address'] ?? '')
-            );
-
-            if (
-                $address === ''
-                || isset($seenAddresses[$address])
-            ) {
-                continue;
-            }
-
-            $seenAddresses[$address] = true;
-
-            $result[] = [
-                'address' => $address,
-                'name' => trim(
-                    (string) ($row['account'] ?? '')
-                ),
-                'personal' => trim(
-                    (string) ($row['personal'] ?? '')
-                ),
-            ];
-
-            if (count($result) >= $limit) {
-                break;
-            }
+        if (!$row) {
+            return null;
         }
 
-        return $result;
+        $sumRaw = $this->parseLegacySum(
+            $row['summ'] ?? ''
+        );
+
+        return [
+            'address' => trim(
+                (string) ($row['address'] ?? '')
+            ),
+            'name' => trim(
+                (string) ($row['account'] ?? '')
+            ),
+            'tariff' => trim(
+                (string) ($row['tarif'] ?? '')
+            ),
+            'debt' => max(0, $sumRaw) / 10000,
+            'balance' => $sumRaw / 10000,
+        ];
     }
 
 
