@@ -1850,3 +1850,18 @@ body.is-page-loading .app-shell {
 }
 
 
+.house-card__debt {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.house-card__control {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.2;
+    color: #64748b;
+    white-space: nowrap;
+}
