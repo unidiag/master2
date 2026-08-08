@@ -1545,8 +1545,71 @@ elseif ($module === 'stat'): ?>
                     <?php endif; ?>
                 </a>
             <?php endforeach; ?>
+
+
+
+
+
+
         </div>
 
+        <?php if (
+            $house !== ''
+            && $personal === ''
+        ): ?>
+
+            <div class="house-control">
+
+                <form
+                    method="post"
+                    class="house-control__form"
+                    onsubmit="return confirm('Подтвердить выполнение контроля дома?')"
+                >
+
+                    <input
+                        type="hidden"
+                        name="csrf_token"
+                        value="<?= e(csrf_token()) ?>"
+                    >
+
+                    <input
+                        type="hidden"
+                        name="action"
+                        value="house_control"
+                    >
+
+                    <input
+                        type="hidden"
+                        name="house"
+                        value="<?= e($house) ?>"
+                    >
+
+                    <button
+                        type="submit"
+                        class="button house-control__button"
+                    >
+                        Контроль:
+
+                        <?php if ($houseControl !== ''): ?>
+
+                            <?= e(
+                                (new DateTimeImmutable(
+                                    $houseControl
+                                ))->format('d.m.Y')
+                            ) ?>
+
+                        <?php else: ?>
+
+                            не выполнялся
+
+                        <?php endif; ?>
+                    </button>
+
+                </form>
+
+            </div>
+
+        <?php endif; ?>
 
 
 

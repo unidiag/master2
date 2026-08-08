@@ -142,12 +142,43 @@ final class ConnectionRepository
 
 
 
-
-final class GroupRepository
+final class HouseRepository
 {
-    public function __construct(
-        private PDO $db
-    ) {
+    private PDO $db;
+
+    public function __construct(PDO $db)
+    {
+        $this->db = $db;
+    }
+
+    public function get(string $house): array
+    {
+        $house = trim($house);
+
+        if ($house === '') {
+            return [];
+        }
+
+        $statement = $this->db->prepare(
+            'SELECT
+                house,
+                group_size,
+                control,
+                descr
+            FROM master_doma
+            WHERE house = :house
+            LIMIT 1'
+        );
+
+        $statement->execute([
+            'house' => $house,
+        ]);
+
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return is_array($row)
+            ? $row
+            : [];
     }
 
     public function getSize(
@@ -162,9 +193,9 @@ final class GroupRepository
 
         $statement = $this->db->prepare(
             'SELECT group_size
-             FROM master_groups
-             WHERE house = :house
-             LIMIT 1'
+            FROM master_doma
+            WHERE house = :house
+            LIMIT 1'
         );
 
         $statement->execute([
@@ -205,7 +236,7 @@ final class GroupRepository
         }
 
         $statement = $this->db->prepare(
-            'INSERT INTO master_groups (
+            'INSERT INTO master_doma (
                 house,
                 group_size
             ) VALUES (
@@ -231,9 +262,54 @@ final class GroupRepository
 
         $statement->execute();
     }
+
+    public function control(string $house): string
+    {
+        $house = trim($house);
+
+        if ($house === '') {
+            throw new InvalidArgumentException(
+                'Название дома не указано.'
+            );
+        }
+
+        $statement = $this->db->prepare(
+            'INSERT INTO master_doma (
+                house,
+                group_size,
+                control
+            ) VALUES (
+                :house,
+                4,
+                NOW()
+            )
+            ON DUPLICATE KEY UPDATE
+                control = NOW(),
+                updated_at = CURRENT_TIMESTAMP'
+        );
+
+        $statement->execute([
+            'house' => $house,
+        ]);
+
+        $statement = $this->db->prepare(
+            'SELECT control
+            FROM master_doma
+            WHERE house = :house
+            LIMIT 1'
+        );
+
+        $statement->execute([
+            'house' => $house,
+        ]);
+
+        $value = $statement->fetchColumn();
+
+        return $value === false
+            ? ''
+            : (string) $value;
+    }
 }
-
-
 
 final class SubscriberRepository
 {

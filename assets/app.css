@@ -1828,3 +1828,23 @@ body.is-page-loading .app-shell {
 
 
 
+
+
+
+
+.house-control {
+    display: flex;
+    justify-content: center;
+
+    width: 100%;
+    margin-top: 24px;
+    padding-bottom: 12px;
+}
+
+.house-control__form {
+    margin: 0;
+}
+
+.house-control__button {
+    min-width: 180px;
+}

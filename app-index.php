@@ -1,16 +1,10 @@
 <?php
 
-
-
-
-
 declare(strict_types=1);
-
 
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
-
 
 require __DIR__ . '/app/bootstrap.php';
 require_once __DIR__ . '/app/TelegramService.php';
@@ -27,11 +21,30 @@ require_auth(
 
 $module = get_string('module', 30) ?: 'zayavki';
 $action = get_string('action', 30);
+
 $page = positive_int($_GET['page'] ?? 1);
-$perPage = max(10, min(100, (int)($config['app']['per_page'] ?? 30)));
+
+$perPage = max(
+    10,
+    min(
+        100,
+        (int) ($config['app']['per_page'] ?? 30)
+    )
+);
+
 $offset = ($page - 1) * $perPage;
+
 $search = get_string('search', 100);
-$status = in_array(($_GET['status'] ?? 'all'), ['all', 'open', 'done'], true)
+
+$status = in_array(
+    ($_GET['status'] ?? 'all'),
+    [
+        'all',
+        'open',
+        'done',
+    ],
+    true
+)
     ? (string) ($_GET['status'] ?? 'all')
     : 'all';
 
@@ -39,12 +52,14 @@ $tickets = new TicketRepository($pdo);
 $connections = new ConnectionRepository($pdo);
 $subscribers = new SubscriberRepository($pdo);
 $karandash = new KarandashRepository($pdo);
-$groups = new GroupRepository($pdo);
-$channels = new ChannelService($config['channels'] ?? []);
-
+$housesRepository = new HouseRepository($pdo);
+$channels = new ChannelService(
+    $config['channels'] ?? []
+);
 
 $apartmentGroupSize = 4;
-
+$houseControl = '';
+$houseDescr = '';
 
 if (
     $_SERVER['REQUEST_METHOD'] === 'GET'
@@ -75,7 +90,10 @@ if (
 
 if (
     $_SERVER['REQUEST_METHOD'] === 'POST'
-    && post_string('ajax', 30) === 'save_apartment_group'
+    && post_string(
+        'ajax',
+        30
+    ) === 'save_apartment_group'
 ) {
     header(
         'Content-Type: application/json; charset=utf-8'
@@ -86,9 +104,14 @@ if (
     try {
         verify_csrf();
 
-        $house = post_string('house', 255);
+        $house = post_string(
+            'house',
+            255
+        );
+
         $groupSize = (int) (
-            $_POST['group_size'] ?? 4
+            $_POST['group_size']
+            ?? 4
         );
 
         if ($house === '') {
@@ -97,13 +120,16 @@ if (
             );
         }
 
-        if ($groupSize < 0 || $groupSize > 6) {
+        if (
+            $groupSize < 0
+            || $groupSize > 6
+        ) {
             throw new InvalidArgumentException(
                 'Допустимое значение — от 0 до 6.'
             );
         }
 
-        $groups->saveSize(
+        $housesRepository->saveSize(
             $house,
             $groupSize
         );
@@ -134,22 +160,7 @@ if (
     exit;
 }
 
-
-
 $subscriberDebt = 0.0;
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function ticket_telegram_message(
     array $ticket,
@@ -181,16 +192,24 @@ function ticket_telegram_message(
     );
 
     $description = trim(
-        (string) ($ticket['desc'] ?? '')
+        (string) (
+            $ticket['desc']
+            ?? ''
+        )
     );
 
     $other = trim(
-        (string) ($ticket['other'] ?? '')
+        (string) (
+            $ticket['other']
+            ?? ''
+        )
     );
 
     $message .=
         '<b>Заявка №:</b> '
-        . telegram_html($ticket['id'] ?? '')
+        . telegram_html(
+            $ticket['id'] ?? ''
+        )
         . "\n";
 
     if ($abonent !== '') {
@@ -238,7 +257,9 @@ function ticket_telegram_message(
     $message .=
         "\n"
         . '<b>Время:</b> '
-        . telegram_html(date('d.m.Y H:i:s'));
+        . telegram_html(
+            date('d.m.Y H:i:s')
+        );
 
     return $message;
 }
@@ -256,24 +277,38 @@ function connection_telegram_message(
         : "✅ <b>Подключение завершено</b>\n\n";
 
     $abonent = trim(
-        (string) ($connection['abonent'] ?? '')
+        (string) (
+            $connection['abonent']
+            ?? ''
+        )
     );
 
     $address = trim(
-        (string) ($connection['address'] ?? '')
+        (string) (
+            $connection['address']
+            ?? ''
+        )
     );
 
     $description = trim(
-        (string) ($connection['desc'] ?? '')
+        (string) (
+            $connection['desc']
+            ?? ''
+        )
     );
 
     $other = trim(
-        (string) ($connection['other'] ?? '')
+        (string) (
+            $connection['other']
+            ?? ''
+        )
     );
 
     $message .=
         '<b>Подключение №:</b> '
-        . telegram_html($connection['id'] ?? '')
+        . telegram_html(
+            $connection['id'] ?? ''
+        )
         . "\n";
 
     if ($abonent !== '') {
@@ -312,29 +347,180 @@ function connection_telegram_message(
         . telegram_html($result)
         . "\n"
         . '<b>Время:</b> '
-        . telegram_html(date('d.m.Y H:i:s'));
+        . telegram_html(
+            date('d.m.Y H:i:s')
+        );
 
     return $message;
 }
 
-
-
-
-
-
-
-
+/*
+ * Действия страницы статистики,
+ * связанные с Telegram и контролем дома.
+ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $postAction = post_string('action', 30);
+    $postAction = post_string(
+        'action',
+        30
+    );
 
+    /*
+     * Контроль дома.
+     */
+    if ($postAction === 'house_control') {
+        verify_csrf();
+
+        $house = post_string(
+            'house',
+            255
+        );
+
+        if ($house === '') {
+            flash(
+                'error',
+                'Название дома не указано.'
+            );
+
+            redirect([
+                'module' => 'stat',
+            ]);
+        }
+
+        try {
+            /*
+             * Обновляем дату/время контроля
+             * в master_doma.
+             */
+            $control = $housesRepository->control(
+                $house
+            );
+
+            if ($control === '') {
+                throw new RuntimeException(
+                    'Не удалось сохранить время контроля.'
+                );
+            }
+
+            /*
+             * Время получаем из сохранённого
+             * значения базы данных.
+             */
+            $controlTime = new DateTimeImmutable(
+                $control
+            );
+
+            $message =
+                'Контроль дома '
+                . telegram_html($house)
+                . ' выполнен '
+                . telegram_html(
+                    $controlTime->format(
+                        'd.m.Y H:i:s'
+                    )
+                );
+
+            $telegramEnabled =
+                (bool) (
+                    $config['telegram']['enabled']
+                    ?? false
+                );
+
+            $chatIds =
+                $config['telegram']['chat_ids']
+                ?? [];
+
+            if (!$telegramEnabled) {
+                flash(
+                    'warning',
+                    'Контроль сохранён, но Telegram отключён.'
+                );
+            } elseif (
+                !is_array($chatIds)
+                || !$chatIds
+            ) {
+                flash(
+                    'warning',
+                    'Контроль сохранён, но получатели Telegram не настроены.'
+                );
+            } else {
+                $results = $telegram->sendToMany(
+                    $chatIds,
+                    $message
+                );
+
+                $sent = count(
+                    array_filter(
+                        $results,
+                        static function (
+                            bool $result
+                        ): bool {
+                            return $result;
+                        }
+                    )
+                );
+
+                $failed =
+                    count($results)
+                    - $sent;
+
+                if (
+                    $sent > 0
+                    && $failed === 0
+                ) {
+                    flash(
+                        'success',
+                        'Контроль дома выполнен.'
+                    );
+                } elseif ($sent > 0) {
+                    flash(
+                        'warning',
+                        'Контроль сохранён. Telegram: отправлено '
+                        . $sent
+                        . ', ошибок '
+                        . $failed
+                        . '.'
+                    );
+                } else {
+                    flash(
+                        'warning',
+                        'Контроль сохранён, но сообщение в Telegram отправить не удалось.'
+                    );
+                }
+            }
+        } catch (Throwable $exception) {
+            flash(
+                'error',
+                $exception->getMessage()
+            );
+        }
+
+        redirect([
+            'module' => 'stat',
+            'house' => $house,
+        ]);
+    }
+
+    /*
+     * Уведомление об отключении абонента.
+     */
     if ($postAction === 'telegram_disconnect') {
         verify_csrf();
 
-        $personal = post_string('personal', 20);
-        $house = post_string('house', 100);
+        $personal = post_string(
+            'personal',
+            20
+        );
+
+        $house = post_string(
+            'house',
+            100
+        );
 
         if ($personal === '') {
-            flash('error', 'Лицевой счёт не указан.');
+            flash(
+                'error',
+                'Лицевой счёт не указан.'
+            );
 
             redirect([
                 'module' => 'stat',
@@ -342,20 +528,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
         }
 
-        $subscriberData = $subscribers->paymentHistory(
-            $personal
-        );
+        $subscriberData =
+            $subscribers->paymentHistory(
+                $personal
+            );
 
         $subscriberName = trim(
-            (string) ($subscriberData['subscriber'] ?? '')
+            (string) (
+                $subscriberData['subscriber']
+                ?? ''
+            )
         );
 
         $subscriberAddress = trim(
-            (string) ($subscriberData['address'] ?? '')
+            (string) (
+                $subscriberData['address']
+                ?? ''
+            )
         );
 
         $subscriberTariff = trim(
-            (string) ($subscriberData['tariff'] ?? '')
+            (string) (
+                $subscriberData['tariff']
+                ?? ''
+            )
         );
 
         $message =
@@ -381,45 +577,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message .=
                 "\n"
                 . '<b>Тариф:</b> '
-                . telegram_html($subscriberTariff);
+                . telegram_html(
+                    $subscriberTariff
+                );
         }
 
-        // $message .=
-        //     "\n"
-        //     . '<b>Сообщил:</b> '
-        //     . telegram_html(current_user());
-
         $telegramEnabled =
-            (bool) ($config['telegram']['enabled'] ?? false);
+            (bool) (
+                $config['telegram']['enabled']
+                ?? false
+            );
 
-        $chatIds = $config['telegram']['chat_ids'] ?? [];
+        $chatIds =
+            $config['telegram']['chat_ids']
+            ?? [];
 
         if (!$telegramEnabled) {
             flash(
                 'error',
                 'Отправка в Telegram отключена.'
             );
-        } elseif (!is_array($chatIds) || !$chatIds) {
+        } elseif (
+            !is_array($chatIds)
+            || !$chatIds
+        ) {
             flash(
                 'error',
                 'Получатели Telegram не настроены.'
             );
         } else {
-            $results = $telegram->sendToMany(
-                $chatIds,
-                $message
-            );
+            $results =
+                $telegram->sendToMany(
+                    $chatIds,
+                    $message
+                );
 
             $sent = count(
                 array_filter(
                     $results,
-                    static fn(bool $result): bool => $result
+                    static fn(
+                        bool $result
+                    ): bool => $result
                 )
             );
 
-            $failed = count($results) - $sent;
+            $failed =
+                count($results)
+                - $sent;
 
-            if ($sent > 0 && $failed === 0) {
+            if (
+                $sent > 0
+                && $failed === 0
+            ) {
                 flash(
                     'success',
                     'Сообщение отправлено: '
@@ -451,28 +660,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-
-
-
-
+/*
+ * Основные POST-действия сайта.
+ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
-    $postAction = post_string('action', 30);
-    $id = positive_int($_POST['id'] ?? 0, 0);
 
+    $postAction = post_string(
+        'action',
+        30
+    );
 
-
+    $id = positive_int(
+        $_POST['id'] ?? 0,
+        0
+    );
 
     if ($postAction === 'karandash_add') {
-        $personal = post_string('personal', 20);
-        $house = post_string('house', 100);
-        $address = post_string('address', 255);
-        $descr = post_string('descr', 2000);
-        $returnModule = post_string('return_module', 30);
+        $personal = post_string(
+            'personal',
+            20
+        );
 
-        $returnModule = $returnModule === 'karandash'
-            ? 'karandash'
-            : 'stat';
+        $house = post_string(
+            'house',
+            100
+        );
+
+        $address = post_string(
+            'address',
+            255
+        );
+
+        $descr = post_string(
+            'descr',
+            2000
+        );
+
+        $returnModule = post_string(
+            'return_module',
+            30
+        );
+
+        $returnModule =
+            $returnModule === 'karandash'
+                ? 'karandash'
+                : 'stat';
 
         if ($address === '') {
             flash(
@@ -480,7 +713,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'Не удалось определить адрес абонента.'
             );
 
-            if ($returnModule === 'karandash') {
+            if (
+                $returnModule
+                === 'karandash'
+            ) {
                 redirect([
                     'module' => 'karandash',
                 ]);
@@ -493,7 +729,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
         }
 
-        $alreadyExists = $karandash->exists($address);
+        $alreadyExists =
+            $karandash->exists(
+                $address
+            );
 
         if (
             $descr === ''
@@ -511,7 +750,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
         }
 
-
         $karandash->save(
             $address,
             $descr
@@ -524,7 +762,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 : 'Абонент взят на карандаш.'
         );
 
-        if ($returnModule === 'karandash') {
+        if (
+            $returnModule
+            === 'karandash'
+        ) {
             redirect([
                 'module' => 'karandash',
             ]);
@@ -537,9 +778,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
     }
 
-
-
-
+    /*
+     * Заявки.
+     */
     if ($module === 'zayavki') {
         if ($postAction === 'create') {
             $allowedDescriptions = [
@@ -552,10 +793,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'другие услуги',
             ];
 
-            $address = post_string('address', 50);
-            $abonent = post_string('abonent', 50);
-            $description = post_string('description', 50);
-            $other = post_string('other', 50);
+            $address = post_string(
+                'address',
+                50
+            );
+
+            $abonent = post_string(
+                'abonent',
+                50
+            );
+
+            $description = post_string(
+                'description',
+                50
+            );
+
+            $other = post_string(
+                'other',
+                50
+            );
 
             if ($address === '') {
                 flash(
@@ -563,7 +819,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'Укажите адрес абонента.'
                 );
 
-                redirect(['module' => 'zayavki']);
+                redirect([
+                    'module' => 'zayavki',
+                ]);
             }
 
             if ($abonent === '') {
@@ -572,7 +830,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'Укажите ФИО абонента.'
                 );
 
-                redirect(['module' => 'zayavki']);
+                redirect([
+                    'module' => 'zayavki',
+                ]);
             }
 
             if (
@@ -587,7 +847,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'Выберите описание заявки.'
                 );
 
-                redirect(['module' => 'zayavki']);
+                redirect([
+                    'module' => 'zayavki',
+                ]);
             }
 
             $tickets->create([
@@ -601,21 +863,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'who' => current_user(),
             ]);
 
-            flash('success', 'Заявка добавлена');
+            flash(
+                'success',
+                'Заявка добавлена'
+            );
         } elseif (
             $postAction === 'complete'
             && $id > 0
         ) {
-            $ticket = $tickets->find($id);
+            $ticket = $tickets->find(
+                $id
+            );
 
             if ($ticket === null) {
-                flash('error', 'Заявка не найдена');
-                redirect(['module' => 'zayavki']);
+                flash(
+                    'error',
+                    'Заявка не найдена'
+                );
+
+                redirect([
+                    'module' => 'zayavki',
+                ]);
             }
 
-            $master = post_string('master', 50);
-            $result = post_string('result', 50);
-            $cost = post_string('cost', 10);
+            $master = post_string(
+                'master',
+                50
+            );
+
+            $result = post_string(
+                'result',
+                50
+            );
+
+            $cost = post_string(
+                'cost',
+                10
+            );
 
             $tickets->complete(
                 $id,
@@ -636,16 +920,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 )
             );
 
-            flash('success', 'Заявка выполнена');
+            flash(
+                'success',
+                'Заявка выполнена'
+            );
         } elseif (
             $postAction === 'withdraw'
             && $id > 0
         ) {
-            $ticket = $tickets->find($id);
+            $ticket = $tickets->find(
+                $id
+            );
 
             if ($ticket === null) {
-                flash('error', 'Заявка не найдена');
-                redirect(['module' => 'zayavki']);
+                flash(
+                    'error',
+                    'Заявка не найдена'
+                );
+
+                redirect([
+                    'module' => 'zayavki',
+                ]);
             }
 
             $master = current_user();
@@ -667,29 +962,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 )
             );
 
-            flash('success', 'Заявка снята');
+            flash(
+                'success',
+                'Заявка снята'
+            );
         }
 
-        redirect(['module' => 'zayavki']);
+        redirect([
+            'module' => 'zayavki',
+        ]);
     }
 
-
-    
-
-
-
-
-
-
-
-
-
+    /*
+     * Подключения.
+     */
     if ($module === 'podkluchki') {
         if ($postAction === 'create') {
             $connections->create([
-                'abonent' => post_string('abonent', 50),
-                'address' => post_string('address', 50),
-                'other' => post_string('other', 50),
+                'abonent' => post_string(
+                    'abonent',
+                    50
+                ),
+                'address' => post_string(
+                    'address',
+                    50
+                ),
+                'other' => post_string(
+                    'other',
+                    50
+                ),
                 'description' => post_string(
                     'description',
                     50
@@ -697,20 +998,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'who' => current_user(),
             ]);
 
-            flash('success', 'Подключение добавлено');
+            flash(
+                'success',
+                'Подключение добавлено'
+            );
         } elseif (
             $postAction === 'complete'
             && $id > 0
         ) {
-            $connection = $connections->find($id);
+            $connection =
+                $connections->find(
+                    $id
+                );
 
             if ($connection === null) {
-                flash('error', 'Подключение не найдено');
-                redirect(['module' => 'podkluchki']);
+                flash(
+                    'error',
+                    'Подключение не найдено'
+                );
+
+                redirect([
+                    'module' => 'podkluchki',
+                ]);
             }
 
-            $master = post_string('master', 50);
-            $result = post_string('result', 50);
+            $master = post_string(
+                'master',
+                50
+            );
+
+            $result = post_string(
+                'result',
+                50
+            );
 
             $connections->complete(
                 $id,
@@ -729,16 +1049,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 )
             );
 
-            flash('success', 'Подключение завершено');
+            flash(
+                'success',
+                'Подключение завершено'
+            );
         } elseif (
             $postAction === 'withdraw'
             && $id > 0
         ) {
-            $connection = $connections->find($id);
+            $connection =
+                $connections->find(
+                    $id
+                );
 
             if ($connection === null) {
-                flash('error', 'Подключение не найдено');
-                redirect(['module' => 'podkluchki']);
+                flash(
+                    'error',
+                    'Подключение не найдено'
+                );
+
+                redirect([
+                    'module' => 'podkluchki',
+                ]);
             }
 
             $master = current_user();
@@ -760,17 +1092,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 )
             );
 
-            flash('success', 'Подключение снято');
+            flash(
+                'success',
+                'Подключение снято'
+            );
         }
 
-        redirect(['module' => 'podkluchki']);
+        redirect([
+            'module' => 'podkluchki',
+        ]);
     }
-
-
-
-
-
-
 }
 
 $titles = [
@@ -782,82 +1113,262 @@ $titles = [
     'channels' => 'Каналы',
 ];
 
-$title = isset($titles[$module]) ? $titles[$module] : 'Заявки';
+$title = isset($titles[$module])
+    ? $titles[$module]
+    : 'Заявки';
 
 $data = [];
-if ($module === 'zayavki') $data = $tickets->list($search, $status, $perPage, $offset);
-if ($module === 'podkluchki') $data = $connections->list($search, $status, $perPage, $offset);
-if ($module === 'database' && $action !== 'history') $data = $subscribers->list($search, $perPage, $offset);
-if ($module === 'database' && $action === 'history') $data = ['rows' => $subscribers->history(get_string('personal', 10)), 'total' => 0];
-if ($module === 'stat') {
-    $selectedHouse = trim((string) ($_GET['house'] ?? ''));
-    $selectedPersonal = trim((string) ($_GET['personal'] ?? ''));
 
+if ($module === 'zayavki') {
+    $data = $tickets->list(
+        $search,
+        $status,
+        $perPage,
+        $offset
+    );
+}
+
+if ($module === 'podkluchki') {
+    $data = $connections->list(
+        $search,
+        $status,
+        $perPage,
+        $offset
+    );
+}
+
+if (
+    $module === 'database'
+    && $action !== 'history'
+) {
+    $data = $subscribers->list(
+        $search,
+        $perPage,
+        $offset
+    );
+}
+
+if (
+    $module === 'database'
+    && $action === 'history'
+) {
+    $data = [
+        'rows' => $subscribers->history(
+            get_string(
+                'personal',
+                10
+            )
+        ),
+        'total' => 0,
+    ];
+}
+
+if ($module === 'stat') {
+    $selectedHouse = trim(
+        (string) (
+            $_GET['house']
+            ?? ''
+        )
+    );
+
+    $selectedPersonal = trim(
+        (string) (
+            $_GET['personal']
+            ?? ''
+        )
+    );
+
+    /*
+     * В шапке сайта показываем название
+     * выбранного дома вместо "Статистика".
+     */
+    if ($selectedHouse !== '') {
+        $title = $selectedHouse;
+    }
+
+    /*
+     * История конкретного абонента.
+     */
     if ($selectedPersonal !== '') {
-        $data = $subscribers->paymentHistory($selectedPersonal);
+        $data =
+            $subscribers->paymentHistory(
+                $selectedPersonal
+            );
 
         $houses = [];
         $apartments = [];
-        $payments = $data['payments'] ?? [];
+
+        $payments =
+            $data['payments']
+            ?? [];
+
         $house = $selectedHouse;
-        $personal = $data['personal'] ?? $selectedPersonal;
-        $subscriber = $data['subscriber'] ?? '';
-        $subscriberAddress = $data['address'] ?? '';
-        $subscriberTariff = $data['tariff'] ?? '';
-        $subscriberDebt = (float) ($data['debt'] ?? 0);
 
-        $subscriberKarandash = $subscriberAddress !== ''
-            ? $karandash->findByAddress($subscriberAddress)
-            : null;
+        $personal =
+            $data['personal']
+            ?? $selectedPersonal;
 
-        $subscriberKarandashDescr = trim(
-            (string) ($subscriberKarandash['descr'] ?? '')
+        $subscriber =
+            $data['subscriber']
+            ?? '';
+
+        $subscriberAddress =
+            $data['address']
+            ?? '';
+
+        $subscriberTariff =
+            $data['tariff']
+            ?? '';
+
+        $subscriberDebt = (float) (
+            $data['debt']
+            ?? 0
         );
 
-        $subscriberOnKarandash = $subscriberKarandash !== null;
+        $subscriberKarandash =
+            $subscriberAddress !== ''
+                ? $karandash->findByAddress(
+                    $subscriberAddress
+                )
+                : null;
+
+        $subscriberKarandashDescr =
+            trim(
+                (string) (
+                    $subscriberKarandash['descr']
+                    ?? ''
+                )
+            );
+
+        $subscriberOnKarandash =
+            $subscriberKarandash !== null;
 
         $update = '';
+
+        /*
+         * Если дом присутствует в URL,
+         * получаем его информацию.
+         */
+        if ($house !== '') {
+            $houseInfo =
+                $housesRepository->get(
+                    $house
+                );
+
+            $houseControl = trim(
+                (string) (
+                    $houseInfo['control']
+                    ?? ''
+                )
+            );
+
+            $houseDescr = trim(
+                (string) (
+                    $houseInfo['descr']
+                    ?? ''
+                )
+            );
+        }
     } elseif ($selectedHouse !== '') {
+        /*
+         * Список квартир выбранного дома.
+         */
         $data = $subscribers->apartments(
             $selectedHouse
         );
 
         $houses = [];
-        $apartments = $data['apartments'] ?? [];
+
+        $apartments =
+            $data['apartments']
+            ?? [];
+
         $payments = [];
 
-        $house = $data['house'] ?? $selectedHouse;
+        $house =
+            $data['house']
+            ?? $selectedHouse;
+
         $personal = '';
-        $update = $data['update'] ?? '';
+
+        $update =
+            $data['update']
+            ?? '';
 
         /*
-        * Если дом ещё отсутствует в master_groups,
-        * используется значение по умолчанию — 4.
-        */
-        $apartmentGroupSize = $groups->getSize(
-            $house,
-            4
+         * Информация о доме:
+         * group_size, control, descr.
+         */
+        $houseInfo =
+            $housesRepository->get(
+                $house
+            );
+
+        $houseControl = trim(
+            (string) (
+                $houseInfo['control']
+                ?? ''
+            )
         );
+
+        $houseDescr = trim(
+            (string) (
+                $houseInfo['descr']
+                ?? ''
+            )
+        );
+
+        if (
+            array_key_exists(
+                'group_size',
+                $houseInfo
+            )
+        ) {
+            $apartmentGroupSize =
+                (int) $houseInfo['group_size'];
+        } else {
+            $apartmentGroupSize = 4;
+        }
+
+        if (
+            $apartmentGroupSize < 0
+            || $apartmentGroupSize > 6
+        ) {
+            $apartmentGroupSize = 4;
+        }
     } else {
+        /*
+         * Список домов.
+         */
         $data = $subscribers->houses();
 
-        $houses = $data['houses'] ?? [];
+        $houses =
+            $data['houses']
+            ?? [];
+
         $apartments = [];
         $payments = [];
 
         $house = '';
         $personal = '';
-        $update = $data['update'] ?? '';
+
+        $update =
+            $data['update']
+            ?? '';
+
+        $houseControl = '';
+        $houseDescr = '';
     }
 }
+
 if ($module === 'debtors') {
     $data = $subscribers->debtors();
 }
 
 if ($module === 'karandash') {
-    $data = $karandash->groupedByHouse();
+    $data =
+        $karandash->groupedByHouse();
 }
-
 
 if ($module === 'channels') {
     $data = [
@@ -866,4 +1377,5 @@ if ($module === 'channels') {
 }
 
 $flashes = consume_flashes();
+
 require __DIR__ . '/app/view.php';
