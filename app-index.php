@@ -47,6 +47,7 @@ $channels = new ChannelService(
     $config['channels'] ?? []
 );
 
+
 $apartmentGroupSize = 4;
 $houseControl = '';
 $houseDescr = '';

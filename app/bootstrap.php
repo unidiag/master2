@@ -49,6 +49,7 @@ require_once __DIR__ . '/Database.php';
 require_once __DIR__ . '/Repositories.php';
 require_once __DIR__ . '/ChannelService.php';
 
+
 $db = new Database($config['database']);
 $pdo = $db->pdo();
 
