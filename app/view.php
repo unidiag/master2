@@ -982,6 +982,15 @@ $jsVersion = is_file($jsFile)
 
                 </select>
 
+                <label class="digital-expensive-filter">
+                    <input
+                        type="checkbox"
+                        id="digital-expensive-checkbox"
+                    >
+
+                    <span>Дорогие</span>
+                </label>
+
 
                 <div class="digital-filter-total">
                     <span>
@@ -1123,6 +1132,7 @@ $jsVersion = is_file($jsFile)
                         data-digital-server="<?= e($astra) ?>"
                         data-digital-distrib="<?= e($distrib) ?>"
                         data-digital-summ="<?= e((string) $summ) ?>"
+                        data-digital-order="<?= e((string) $digitalNumber) ?>"
 
                         data-digital-edit='<?= e(json_encode([
                             'id' => (int) ($channel['id'] ?? 0),
@@ -1503,6 +1513,11 @@ document.addEventListener(
                 'digital-distrib-select'
             );
 
+        const expensiveCheckbox =
+            document.getElementById(
+                'digital-expensive-checkbox'
+            );
+
         const counter =
             document.getElementById(
                 'digital-channel-counter'
@@ -1518,6 +1533,11 @@ document.addEventListener(
                 '.digital-channel-card'
             )
         );
+
+        const grid =
+            document.querySelector(
+                '.digital-channel-grid'
+            );
 
         function updateDigitalChannels() {
             const selectedServer =
@@ -1574,6 +1594,45 @@ document.addEventListener(
                 visibleSumm += summ;
             });
 
+            if (grid) {
+                const sortedCards = [...cards];
+
+                if (
+                    expensiveCheckbox
+                    && expensiveCheckbox.checked
+                ) {
+                    sortedCards.sort(function (a, b) {
+                        const summA = parseFloat(
+                            a.dataset.digitalSumm || '0'
+                        ) || 0;
+
+                        const summB = parseFloat(
+                            b.dataset.digitalSumm || '0'
+                        ) || 0;
+
+                        return summB - summA;
+                    });
+                } else {
+                    sortedCards.sort(function (a, b) {
+                        return (
+                            parseInt(
+                                a.dataset.digitalOrder || '0',
+                                10
+                            )
+                            -
+                            parseInt(
+                                b.dataset.digitalOrder || '0',
+                                10
+                            )
+                        );
+                    });
+                }
+
+                sortedCards.forEach(function (card) {
+                    grid.appendChild(card);
+                });
+            }            
+
             if (counter) {
                 counter.textContent =
                     new Intl.NumberFormat(
@@ -1603,6 +1662,13 @@ document.addEventListener(
 
         if (distribSelect) {
             distribSelect.addEventListener(
+                'change',
+                updateDigitalChannels
+            );
+        }
+
+        if (expensiveCheckbox) {
+            expensiveCheckbox.addEventListener(
                 'change',
                 updateDigitalChannels
             );
