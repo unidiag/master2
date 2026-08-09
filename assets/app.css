@@ -875,8 +875,11 @@ button,input,select {
     font-size: 12px;
     font-weight: 500;
     line-height: 1.2;
-    color: #237114;
+    color: #232423;
     white-space: nowrap;
+    margin-top:3px;
+    border:1px solid #111827;
+    padding: 0 3px;
 }
 
 /* ==========================================================================
@@ -3200,3 +3203,14 @@ body.is-page-loading .app-shell {
         width: 100%;
     }
 }
+
+
+
+.house-card.house-card--control-fresh {
+    background: rgba(24, 253, 108, 0.5);
+}
+
+.house-card.house-card--control-old {
+    background: rgb(220 38 38 / 50%);
+}
+

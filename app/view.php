@@ -989,7 +989,7 @@ $jsVersion = is_file($jsFile)
                     </span>
 
                     <strong id="digital-visible-summ">
-                        0,00
+                        0 $
                     </strong>
                 </div>
 
@@ -1084,9 +1084,11 @@ $jsVersion = is_file($jsFile)
                         )
                     );
 
-                    $summ = (float) (
-                        $channel['summ']
-                        ?? 0
+                    $summ = (int) round(
+                        (float) (
+                            $channel['summ']
+                            ?? 0
+                        )
                     );
 
                     $info = trim(
@@ -1120,12 +1122,7 @@ $jsVersion = is_file($jsFile)
 
                         data-digital-server="<?= e($astra) ?>"
                         data-digital-distrib="<?= e($distrib) ?>"
-                        data-digital-summ="<?= e(number_format(
-                            $summ,
-                            2,
-                            '.',
-                            ''
-                        )) ?>"
+                        data-digital-summ="<?= e((string) $summ) ?>"
 
                         data-digital-edit='<?= e(json_encode([
                             'id' => (int) ($channel['id'] ?? 0),
@@ -1133,12 +1130,7 @@ $jsVersion = is_file($jsFile)
                             'server' => $astra,
                             'lcn' => $lcn,
                             'distrib' => $distrib,
-                            'summ' => number_format(
-                                $summ,
-                                2,
-                                '.',
-                                ''
-                            ),
+                            'summ' => $summ,
                             'info' => $info,
                         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>'
                     >
@@ -1178,10 +1170,10 @@ $jsVersion = is_file($jsFile)
                                     <strong>
                                         <?= e(number_format(
                                             $summ,
-                                            2,
+                                            0,
                                             ',',
                                             ' '
-                                        )) ?>
+                                        )) ?> $
                                     </strong>
                                 <?php endif; ?>
 
@@ -1313,16 +1305,15 @@ $jsVersion = is_file($jsFile)
         </label>
 
         <label>
-            Оплата в месяц
-
+            Оплата в месяц, $
             <input
                 class="input"
                 type="number"
                 name="summ"
                 id="digital-edit-summ"
                 min="0"
-                step="0.01"
-                value="0.00"
+                step="1"
+                value="0"
             >
         </label>
 
@@ -1455,7 +1446,7 @@ document.addEventListener(
                 data.distrib || '';
 
             summInput.value =
-                data.summ || '0.00';
+                data.summ || '0';
 
             infoInput.value =
                 data.info || '';
@@ -1596,10 +1587,10 @@ document.addEventListener(
                     new Intl.NumberFormat(
                         'ru-RU',
                         {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
+                            maximumFractionDigits: 0
                         }
-                    ).format(visibleSumm);
+                    ).format(visibleSumm)
+                    + ' $';
             }
         }
 
@@ -4345,6 +4336,17 @@ function sortCards() {
                     $controlTimestamp = 0;
                 }
 
+                $controlLimitTimestamp = strtotime('-3 months');
+
+                $houseControlClass = '';
+
+                if ($controlTimestamp > 0) {
+                    $houseControlClass =
+                        $controlTimestamp >= $controlLimitTimestamp
+                            ? ' house-card--control-fresh'
+                            : ' house-card--control-old';
+                }              
+
                 $stateChannels = (int) ($house['state_channels'] ?? 0);
                 $analogPackage = (int) ($house['analog_package'] ?? 0);
                 $digitalPackage = (int) ($house['digital_package'] ?? 0);
@@ -4375,7 +4377,12 @@ function sortCards() {
                     data-penetration="<?= e($penetrationWidth) ?>"
                     data-control="<?= e((string) $controlTimestamp) ?>"
                 >
-                    <article class="house-card<?= $isEmptyHouse ? ' house-card--inactive' : '' ?>">
+                    <article
+                        class="house-card<?= $isEmptyHouse
+                            ? ' house-card--inactive'
+                            : ''
+                        ?><?= $houseControlClass ?>"
+                    >
                     <?php
                     $debt = (float) ($house['debt'] ?? 0);
                     $debtors = (int) ($house['debtors'] ?? 0);

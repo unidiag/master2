@@ -22,6 +22,7 @@ return [
     'auth' => [
         'enabled' => true,
         'remember_days' => 30,
+        'remember_secret' => 'СЮДА_ДЛИННАЯ_СЛУЧАЙНАЯ_СТРОКА', // php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"
 
         'users' => [
             'admin' => [

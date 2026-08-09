@@ -135,6 +135,190 @@ function auth_session_cookie_options(int $expires = 0): array
     ];
 }
 
+
+function remember_cookie_name(): string
+{
+    return 'master2_remember';
+}
+
+function remember_cookie_options(int $expires): array
+{
+    return [
+        'expires' => $expires,
+        'path' => '/',
+        'secure' =>
+            !empty($_SERVER['HTTPS'])
+            && $_SERVER['HTTPS'] !== 'off',
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ];
+}
+
+function create_remember_token(
+    string $username,
+    int $expires,
+    string $secret
+): string {
+    $payload = $username . '|' . $expires;
+
+    $signature = hash_hmac(
+        'sha256',
+        $payload,
+        $secret
+    );
+
+    return base64_encode(
+        $payload . '|' . $signature
+    );
+}
+
+function set_remember_cookie(
+    string $username,
+    int $rememberDays,
+    string $secret
+): void {
+    if ($username === '' || $secret === '') {
+        return;
+    }
+
+    $expires =
+        time()
+        + ($rememberDays * 86400);
+
+    $token = create_remember_token(
+        $username,
+        $expires,
+        $secret
+    );
+
+    setcookie(
+        remember_cookie_name(),
+        $token,
+        remember_cookie_options($expires)
+    );
+}
+
+function delete_remember_cookie(): void
+{
+    setcookie(
+        remember_cookie_name(),
+        '',
+        remember_cookie_options(
+            time() - 3600
+        )
+    );
+}
+
+function restore_remembered_user(
+    array $config
+): bool {
+    $cookieName = remember_cookie_name();
+
+    $token = (string) (
+        $_COOKIE[$cookieName]
+        ?? ''
+    );
+
+    if ($token === '') {
+        return false;
+    }
+
+    $decoded = base64_decode(
+        $token,
+        true
+    );
+
+    if ($decoded === false) {
+        delete_remember_cookie();
+
+        return false;
+    }
+
+    $parts = explode(
+        '|',
+        $decoded,
+        3
+    );
+
+    if (count($parts) !== 3) {
+        delete_remember_cookie();
+
+        return false;
+    }
+
+    [
+        $username,
+        $expiresRaw,
+        $signature,
+    ] = $parts;
+
+    $username = trim($username);
+    $expires = (int) $expiresRaw;
+
+    if (
+        $username === ''
+        || $expires <= time()
+        || $signature === ''
+    ) {
+        delete_remember_cookie();
+
+        return false;
+    }
+
+    $secret = (string) (
+        $config['remember_secret']
+        ?? ''
+    );
+
+    if ($secret === '') {
+        return false;
+    }
+
+    $users = $config['users'] ?? [];
+
+    if (
+        !is_array($users)
+        || !isset($users[$username])
+        || !is_array($users[$username])
+    ) {
+        delete_remember_cookie();
+
+        return false;
+    }
+
+    $payload =
+        $username
+        . '|'
+        . $expires;
+
+    $expectedSignature = hash_hmac(
+        'sha256',
+        $payload,
+        $secret
+    );
+
+    if (
+        !hash_equals(
+            $expectedSignature,
+            $signature
+        )
+    ) {
+        delete_remember_cookie();
+
+        return false;
+    }
+
+    session_regenerate_id(true);
+
+    $_SESSION['auth_username'] =
+        $username;
+
+    $_SESSION['auth_remember'] =
+        true;
+
+    return true;
+}
+
 function refresh_auth_session_cookie(int $rememberDays): void
 {
     if (
@@ -159,21 +343,37 @@ function logout_user(): void
     $_SESSION = [];
 
     if (ini_get('session.use_cookies')) {
-        $cookie = session_get_cookie_params();
+        $cookie =
+            session_get_cookie_params();
 
         setcookie(
             session_name(),
             '',
             [
-                'expires' => time() - 3600,
-                'path' => $cookie['path'] ?: '/',
-                'domain' => $cookie['domain'] ?: '',
-                'secure' => (bool) $cookie['secure'],
-                'httponly' => (bool) $cookie['httponly'],
-                'samesite' => 'Lax',
+                'expires' =>
+                    time() - 3600,
+
+                'path' =>
+                    $cookie['path']
+                    ?: '/',
+
+                'domain' =>
+                    $cookie['domain']
+                    ?: '',
+
+                'secure' =>
+                    (bool) $cookie['secure'],
+
+                'httponly' =>
+                    (bool) $cookie['httponly'],
+
+                'samesite' =>
+                    'Lax',
             ]
         );
     }
+
+    delete_remember_cookie();
 
     session_destroy();
 
@@ -212,8 +412,38 @@ function require_auth(
         }
     }
 
+    $rememberSecret = (string) (
+        $config['remember_secret']
+        ?? ''
+    );
+
+    /*
+    * Если обычная PHP-сессия пропала,
+    * пробуем восстановить пользователя
+    * из долговременной remember-cookie.
+    */
+    if (
+        empty($_SESSION['auth_username'])
+        && restore_remembered_user($config)
+    ) {
+        /*
+        * Сессия восстановлена.
+        */
+    }
+
     if (!empty($_SESSION['auth_username'])) {
-        refresh_auth_session_cookie($rememberDays);
+        if (!empty($_SESSION['auth_remember'])) {
+            set_remember_cookie(
+                (string) $_SESSION['auth_username'],
+                $rememberDays,
+                $rememberSecret
+            );
+        }
+
+        refresh_auth_session_cookie(
+            $rememberDays
+        );
+
         return;
     }
 
@@ -264,16 +494,23 @@ function require_auth(
                             time() + $rememberLifetime
                         )
                     );
+
+                    set_remember_cookie(
+                        $username,
+                        $rememberDays,
+                        (string) (
+                            $config['remember_secret']
+                            ?? ''
+                        )
+                    );
                 } else {
-                    /*
-                    * Cookie без срока действия живёт только до
-                    * закрытия браузера.
-                    */
                     setcookie(
                         session_name(),
                         session_id(),
                         auth_session_cookie_options()
                     );
+
+                    delete_remember_cookie();
                 }
 
                 /*
@@ -288,8 +525,7 @@ function require_auth(
                     $chatIds = $telegramConfig['chat_ids'] ?? [];
 
                     if (
-                        $username !== 'admin'
-                        && $telegramEnabled
+                        $telegramEnabled
                         && is_array($chatIds)
                         && $chatIds
                     ) {
