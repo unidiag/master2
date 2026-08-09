@@ -106,6 +106,10 @@ final class TicketRepository
         ];
     }
 
+
+
+
+
     public function find(int $id): ?array
     {
         $q = $this->db->prepare('SELECT * FROM master_zayavki WHERE id = :id');
@@ -513,6 +517,79 @@ final class SubscriberRepository
 
 
 
+
+public function graph(): array
+{
+    $tariffs = [
+        'Государственные каналы',
+        'Аналоговый пакет',
+        'Цифровой пакет',
+    ];
+
+    $statement = $this->db->query(
+        "SELECT
+            CAST(`update` AS UNSIGNED) AS update_ts,
+            TRIM(tarif) AS tariff,
+            COUNT(*) AS subscribers,
+            SUM(
+                CASE
+                    WHEN summ > 0
+                    THEN summ
+                    ELSE 0
+                END
+            ) AS debt_raw
+        FROM master_database
+        WHERE `update` REGEXP '^[0-9]+$'
+          AND TRIM(tarif) IN (
+              'Государственные каналы',
+              'Аналоговый пакет',
+              'Цифровой пакет'
+          )
+        GROUP BY
+            CAST(`update` AS UNSIGNED),
+            TRIM(tarif)
+        ORDER BY
+            CAST(`update` AS UNSIGNED) ASC"
+    );
+
+    $snapshots = [];
+
+    while ($row = $statement->fetch(PDO::FETCH_ASSOC)) {
+        $update = (int) ($row['update_ts'] ?? 0);
+        $tariff = trim((string) ($row['tariff'] ?? ''));
+
+        if ($update <= 0 || !in_array($tariff, $tariffs, true)) {
+            continue;
+        }
+
+        if (!isset($snapshots[$update])) {
+            $snapshots[$update] = [
+                'update' => $update,
+                'packages' => [
+                    'Государственные каналы' => 0,
+                    'Аналоговый пакет' => 0,
+                    'Цифровой пакет' => 0,
+                ],
+                'total' => 0,
+                'debt' => 0.0,
+            ];
+        }
+
+        $subscribers = (int) ($row['subscribers'] ?? 0);
+        $debtRaw = (int) ($row['debt_raw'] ?? 0);
+
+        $snapshots[$update]['packages'][$tariff] = $subscribers;
+        $snapshots[$update]['total'] += $subscribers;
+
+        $snapshots[$update]['debt'] +=
+            $debtRaw / 10000;
+    }
+
+    return [
+        'snapshots' => array_values($snapshots),
+        'tariffs' => $tariffs,
+    ];
+}
 
 
     public function importDatabaseFile(

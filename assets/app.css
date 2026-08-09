@@ -2989,3 +2989,174 @@ body.is-page-loading .app-shell {
 .digital-channel-card--has-summ:hover {
     background: #dcfce7;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* =========================================================
+   Graph
+   ========================================================= */
+
+.graph-page {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.graph-heading {
+    align-items: flex-start;
+    gap: 24px;
+}
+
+.graph-heading__summary {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.graph-heading__summary > div {
+    min-width: 150px;
+    padding: 12px 16px;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 12px;
+}
+
+.graph-heading__summary span {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--muted, #6b7280);
+    font-size: 12px;
+}
+
+.graph-heading__summary strong {
+    font-size: 20px;
+}
+
+.graph-packages {
+    display: grid;
+    grid-template-columns:
+        repeat(
+            auto-fit,
+            minmax(180px, 1fr)
+        );
+    gap: 12px;
+}
+
+.graph-package-card {
+    padding: 16px;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 14px;
+}
+
+.graph-package-card span {
+    display: block;
+    min-height: 32px;
+    color: var(--muted, #6b7280);
+    font-size: 13px;
+}
+
+.graph-package-card strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 26px;
+    line-height: 1;
+}
+
+.graph-card {
+    overflow: hidden;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 16px;
+}
+
+.graph-card__canvas {
+    width: 100%;
+    overflow: hidden;
+    padding: 16px 0 0;
+    box-sizing: border-box;
+}
+
+.graph-card__canvas canvas {
+    display: block;
+}
+
+.graph-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 20px;
+    padding: 16px 20px 20px;
+    border-top: 1px solid var(--border, #e5e7eb);
+}
+
+.graph-legend__item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+}
+
+.graph-legend__marker {
+    width: 18px;
+    height: 4px;
+    border-radius: 999px;
+    flex: 0 0 auto;
+}
+
+@media (max-width: 720px) {
+    .graph-heading {
+        display: block;
+    }
+
+    .graph-heading__summary {
+        margin-top: 16px;
+    }
+
+    .graph-heading__summary > div {
+        flex: 1 1 140px;
+    }
+
+    .graph-packages {
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
+    }
+
+    .graph-package-card strong {
+        font-size: 22px;
+    }
+
+    .graph-card__canvas {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+}
+
+@media (max-width: 440px) {
+    .graph-packages {
+        grid-template-columns: 1fr;
+    }
+}
+
+.graph-card__title {
+    padding: 18px 20px 0;
+    font-size: 16px;
+    font-weight: 700;
+}

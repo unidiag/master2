@@ -1447,6 +1447,7 @@ if (
 $titles = [
     'podkluchki' => 'Подключения',
     'database' => 'Абоненты',
+    'graph' => 'График',
     'stat' => 'Статистика',
     'debtors' => 'Должники',
     'karandash' => 'Карандаш',
@@ -1503,6 +1504,10 @@ if (
         ),
         'total' => 0,
     ];
+}
+
+if ($module === 'graph') {
+    $data = $subscribers->graph();
 }
 
 if ($module === 'stat') {
