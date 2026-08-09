@@ -649,6 +649,7 @@ public function graph(): array
                 personal,
                 account,
                 address,
+                phone,
                 period,
                 summ,
                 tarif_id,
@@ -659,6 +660,7 @@ public function graph(): array
                 :personal,
                 :account,
                 :address,
+                :phone,
                 :period,
                 :summ,
                 :tarif_id,
@@ -734,6 +736,26 @@ public function graph(): array
                     (string) $fields[11]
                 );
 
+                $phone = '';
+
+                if (isset($fields[12])) {
+                    $phone = preg_replace(
+                        '/\D+/',
+                        '',
+                        (string) $fields[12]
+                    ) ?? '';
+
+                    if (
+                        $phone !== ''
+                        && !preg_match(
+                            '/^\d{5,12}$/',
+                            $phone
+                        )
+                    ) {
+                        $phone = '';
+                    }
+                }
+
                 /*
                 * Лицевой счёт и адрес считаем
                 * минимально необходимыми данными.
@@ -750,6 +772,9 @@ public function graph(): array
                     'personal' => $personal,
                     'account' => $account,
                     'address' => $address,
+                    'phone' => $phone !== ''
+                        ? $phone
+                        : null,
                     'period' => $period,
                     'summ' => $summ,
                     'tarif_id' => $tariffId,
