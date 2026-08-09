@@ -22,6 +22,22 @@ require_auth(
 $module = get_string('module', 30) ?: 'zayavki';
 $action = get_string('action', 30);
 
+if (
+    $module === 'terminal'
+    && current_user() !== 'admin'
+) {
+    http_response_code(403);
+
+    flash(
+        'error',
+        'Доступ к терминалу разрешён только администратору.'
+    );
+
+    redirect([
+        'module' => 'zayavki',
+    ]);
+}
+
 $page = positive_int($_GET['page'] ?? 1);
 
 $perPage = max(
@@ -43,9 +59,9 @@ $connections = new ConnectionRepository($pdo);
 $subscribers = new SubscriberRepository($pdo);
 $karandash = new KarandashRepository($pdo);
 $housesRepository = new HouseRepository($pdo);
-$channels = new ChannelService(
-    $config['channels'] ?? []
-);
+$channels = new ChannelService($config['channels'] ?? []);
+$digitalRepository = new DigitalChannelRepository($pdo);
+$digitalChannels = new DigitalChannelService($config['digital'] ?? []);
 
 
 $apartmentGroupSize = 4;
@@ -790,10 +806,207 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         30
     );
 
+    if (
+        $module === 'digital'
+        && $postAction === 'digital_refresh'
+    ) {
+        try {
+            $syncResult = $digitalChannels->sync(
+                $digitalRepository
+            );
+
+            $inserted = 0;
+            $updated = 0;
+            $errors = [];
+
+            foreach ($syncResult as $result) {
+                if (!empty($result['success'])) {
+                    $inserted += (int) (
+                        $result['inserted']
+                        ?? 0
+                    );
+
+                    $updated += (int) (
+                        $result['updated']
+                        ?? 0
+                    );
+
+                    continue;
+                }
+
+                $server = trim(
+                    (string) (
+                        $result['server']
+                        ?? 'Astra'
+                    )
+                );
+
+                $error = trim(
+                    (string) (
+                        $result['error']
+                        ?? 'Ошибка обновления'
+                    )
+                );
+
+                $errors[] =
+                    $server
+                    . ': '
+                    . $error;
+            }
+
+            if ($inserted > 0 || $updated > 0) {
+                flash(
+                    'success',
+                    'Цифровые каналы обновлены. '
+                    . 'Добавлено: '
+                    . $inserted
+                    . ', обновлено: '
+                    . $updated
+                    . '.'
+                );
+            } elseif (!$errors) {
+                flash(
+                    'success',
+                    'Цифровые каналы актуальны. '
+                    . 'Новых или изменённых каналов нет.'
+                );
+            }
+
+            foreach ($errors as $error) {
+                flash(
+                    'error',
+                    $error
+                );
+            }
+        } catch (Throwable $exception) {
+            flash(
+                'error',
+                $exception->getMessage()
+            );
+        }
+
+        redirect([
+            'module' => 'digital',
+        ]);
+    }
+
     $id = positive_int(
         $_POST['id'] ?? 0,
         0
     );
+
+
+
+
+
+    /*
+    * Ручные данные цифрового телеканала.
+    */
+    if (
+        $module === 'digital'
+        && $postAction === 'digital_save'
+    ) {
+        $channelId = positive_int(
+            $_POST['id'] ?? 0,
+            0
+        );
+
+        $lcn = (int) (
+            $_POST['lcn']
+            ?? 0
+        );
+
+        $distrib = post_string(
+            'distrib',
+            100
+        );
+
+        $info = post_string(
+            'info',
+            100
+        );
+
+        $summRaw = trim(
+            (string) (
+                $_POST['summ']
+                ?? '0'
+            )
+        );
+
+        /*
+        * Разрешаем пользователю вводить
+        * как 12.50, так и 12,50.
+        */
+        $summRaw = str_replace(
+            ',',
+            '.',
+            $summRaw
+        );
+
+        $summ = is_numeric($summRaw)
+            ? (float) $summRaw
+            : -1;
+
+        try {
+            $digitalRepository->updateInfo(
+                $channelId,
+                $lcn,
+                $distrib,
+                $summ,
+                $info
+            );
+
+            flash(
+                'success',
+                'Информация о телеканале сохранена.'
+            );
+        } catch (Throwable $exception) {
+            flash(
+                'error',
+                $exception->getMessage()
+            );
+        }
+
+        redirect([
+            'module' => 'digital',
+        ]);
+    }
+
+/*
+ * Удаление цифрового телеканала.
+ */
+if (
+    $module === 'digital'
+    && $postAction === 'digital_delete'
+) {
+    $channelId = positive_int(
+        $_POST['id'] ?? 0,
+        0
+    );
+
+    try {
+        $digitalRepository->delete(
+            $channelId
+        );
+
+        flash(
+            'success',
+            'Телеканал удалён.'
+        );
+    } catch (Throwable $exception) {
+        flash(
+            'error',
+            $exception->getMessage()
+        );
+    }
+
+    redirect([
+        'module' => 'digital',
+    ]);
+}
+
+
+
 
     if ($postAction === 'karandash_add') {
         $personal = post_string(
@@ -1239,6 +1452,7 @@ $titles = [
     'karandash' => 'Карандаш',
     'analog' => 'Аналог',
     'digital' => 'Цифра',
+    'terminal' => 'Terminal',
 ];
 
 $title = isset($titles[$module])
@@ -1510,10 +1724,21 @@ if ($module === 'analog') {
 /*
  * Цифровое телевидение.
  *
- * Пока модуль является заготовкой.
+ * При обычном открытии страницы Astra не опрашиваем.
+ * Данные выводятся только из таблицы master_dtv.
  */
 if ($module === 'digital') {
-    $data = [];
+    $data = [
+        'channels' =>
+            $digitalRepository->getAll(),
+
+        'servers' =>
+            $digitalRepository->getServers(),
+
+        'distributors' =>
+            $config['digital']['distributors']
+            ?? [],
+    ];
 }
 
 $flashes = consume_flashes();

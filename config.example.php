@@ -54,7 +54,17 @@ return [
     ],
 
     'digital' => [
-        'host' => '192.168.1.100',
-        'community' => 'public',
+        'astras' => [
+            'admin:password@192.168.1.15:8000',
+            'admin:password@192.168.1.16:8000',
+            'admin:password@192.168.1.17:8000',
+        ],
+        'distributors' => [
+            'Бета Телесеть',
+            'Навигатор',
+            'ЭмБиДжиБел',
+            'Медиаконтакт',
+            'M7 Group',
+        ],
     ],
 ];

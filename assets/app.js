@@ -859,3 +859,147 @@ document.addEventListener(
         );
     }
 );
+
+
+
+
+
+
+
+
+
+
+
+const terminalElement = document.querySelector(
+    '[data-terminal]'
+);
+
+if (
+    terminalElement
+    && window.Terminal
+) {
+    const statusElement = document.querySelector(
+        '[data-terminal-status]'
+    );
+
+    const terminal = new Terminal({
+        cursorBlink: true,
+        convertEol: true,
+        scrollback: 5000,
+        fontSize: 14,
+        fontFamily:
+            '"JetBrains Mono", "Fira Code", monospace',
+    });
+
+    const fitAddon = new FitAddon.FitAddon();
+
+    terminal.loadAddon(fitAddon);
+
+    terminal.open(terminalElement);
+    fitAddon.fit();
+
+    const protocol =
+        location.protocol === 'https:'
+            ? 'wss:'
+            : 'ws:';
+
+    const socket = new WebSocket(
+        `${protocol}//${location.host}/terminal-ws`
+    );
+
+    socket.binaryType = 'arraybuffer';
+
+    socket.addEventListener(
+        'open',
+        () => {
+            if (statusElement) {
+                statusElement.textContent =
+                    'Подключено';
+
+                statusElement.classList.add(
+                    'connected'
+                );
+            }
+
+            sendResize();
+            terminal.focus();
+        }
+    );
+
+    socket.addEventListener(
+        'message',
+        (event) => {
+            if (event.data instanceof ArrayBuffer) {
+                terminal.write(
+                    new Uint8Array(event.data)
+                );
+
+                return;
+            }
+
+            terminal.write(event.data);
+        }
+    );
+
+    socket.addEventListener(
+        'close',
+        () => {
+            if (statusElement) {
+                statusElement.textContent =
+                    'Отключено';
+
+                statusElement.classList.remove(
+                    'connected'
+                );
+
+                statusElement.classList.add(
+                    'disconnected'
+                );
+            }
+
+            terminal.write(
+                '\r\n\x1b[31mСоединение закрыто\x1b[0m\r\n'
+            );
+        }
+    );
+
+    terminal.onData((data) => {
+        if (
+            socket.readyState
+            !== WebSocket.OPEN
+        ) {
+            return;
+        }
+
+        socket.send(JSON.stringify({
+            type: 'input',
+            data,
+        }));
+    });
+
+    function sendResize() {
+        if (
+            socket.readyState
+            !== WebSocket.OPEN
+        ) {
+            return;
+        }
+
+        socket.send(JSON.stringify({
+            type: 'resize',
+            cols: terminal.cols,
+            rows: terminal.rows,
+        }));
+    }
+
+    window.addEventListener(
+        'resize',
+        () => {
+            if (fitAddon) {
+                fitAddon.fit();
+            }
+
+            sendResize();
+        }
+    );
+}
