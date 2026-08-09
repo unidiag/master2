@@ -2041,6 +2041,60 @@ $latestTotal = (int) (
     $latestSnapshot['total']
     ?? 0
 );
+
+$graphDebts = array_map(
+    static function (array $snapshot): float {
+        return (float) (
+            $snapshot['debt']
+            ?? 0
+        );
+    },
+    $graphSnapshots
+);
+
+$graphMaxDebt = 0.0;
+$graphMaxDebtDate = null;
+
+$graphMinDebt = 0.0;
+$graphMinDebtDate = null;
+
+if ($graphSnapshots) {
+    $graphMaxDebt = max($graphDebts);
+    $graphMinDebt = min($graphDebts);
+
+    foreach ($graphSnapshots as $snapshot) {
+        $debt = (float) (
+            $snapshot['debt']
+            ?? 0
+        );
+
+        $update = (int) (
+            $snapshot['update']
+            ?? 0
+        );
+
+        if (
+            $graphMaxDebtDate === null
+            && $debt === $graphMaxDebt
+        ) {
+            $graphMaxDebtDate = $update;
+        }
+
+        if (
+            $graphMinDebtDate === null
+            && $debt === $graphMinDebt
+        ) {
+            $graphMinDebtDate = $update;
+        }
+
+        if (
+            $graphMaxDebtDate !== null
+            && $graphMinDebtDate !== null
+        ) {
+            break;
+        }
+    }
+}
 ?>
 
 <section class="graph-page">
@@ -2052,8 +2106,6 @@ $latestTotal = (int) (
             <p class="page-heading__description">
                 Изменение количества действующих
                 договоров по пакетам.
-                Абоненты «Нет договора»
-                не учитываются.
             </p>
         </div>
 
@@ -2117,7 +2169,49 @@ $latestTotal = (int) (
         <div class="graph-card">
 
             <div class="graph-card__title">
-                Задолженность
+                <div>
+                    Задолженность
+                </div>
+
+                <div class="graph-card__stats">
+                    <span>
+                        Минимальная:
+                        <strong>
+                            <?= e(number_format(
+                                $graphMinDebt,
+                                2,
+                                ',',
+                                ' '
+                            )) ?>
+
+                            <?php if ($graphMinDebtDate): ?>
+                                (<?= e(date(
+                                    'd.m.Y',
+                                    $graphMinDebtDate
+                                )) ?>)
+                            <?php endif; ?>
+                        </strong>
+                    </span>
+
+                    <span>
+                        Максимальная:
+                        <strong>
+                            <?= e(number_format(
+                                $graphMaxDebt,
+                                2,
+                                ',',
+                                ' '
+                            )) ?>
+
+                            <?php if ($graphMaxDebtDate): ?>
+                                (<?= e(date(
+                                    'd.m.Y',
+                                    $graphMaxDebtDate
+                                )) ?>)
+                            <?php endif; ?>
+                        </strong>
+                    </span>
+                </div>
             </div>
 
             <div class="graph-card__canvas">

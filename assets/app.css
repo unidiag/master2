@@ -875,7 +875,7 @@ button,input,select {
     font-size: 12px;
     font-weight: 500;
     line-height: 1.2;
-    color: #218af3;
+    color: #237114;
     white-space: nowrap;
 }
 
@@ -3159,4 +3159,44 @@ body.is-page-loading .app-shell {
     padding: 18px 20px 0;
     font-size: 16px;
     font-weight: 700;
+}
+
+
+
+
+
+.graph-card__title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px 0;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.graph-card__stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    color: var(--muted, #6b7280);
+    font-size: 13px;
+    font-weight: 400;
+}
+
+.graph-card__stats strong {
+    color: inherit;
+    font-weight: 700;
+}
+
+@media (max-width: 720px) {
+    .graph-card__title {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .graph-card__stats {
+        width: 100%;
+    }
 }
