@@ -1203,6 +1203,61 @@ if (
 
 
 
+
+
+    if ($postAction === 'karandash_delete') {
+        if (current_user() !== 'admin') {
+            http_response_code(403);
+
+            flash(
+                'error',
+                'Удаление записей разрешено только администратору.'
+            );
+
+            redirect([
+                'module' => 'karandash',
+            ]);
+        }
+
+        $address = post_string(
+            'address',
+            255
+        );
+
+        if ($address === '') {
+            flash(
+                'error',
+                'Не удалось определить запись для удаления.'
+            );
+
+            redirect([
+                'module' => 'karandash',
+            ]);
+        }
+
+        try {
+            $karandash->delete(
+                $address
+            );
+
+            flash(
+                'success',
+                'Запись удалена с карандаша.'
+            );
+        } catch (Throwable $exception) {
+            flash(
+                'error',
+                $exception->getMessage()
+            );
+        }
+
+        redirect([
+            'module' => 'karandash',
+        ]);
+    }
+
+
+
     if ($postAction === 'karandash_add') {
         $personal = post_string(
             'personal',

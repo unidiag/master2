@@ -2035,6 +2035,20 @@ final class KarandashRepository
         ]);
     }
 
+
+    public function delete(string $address): void
+    {
+        $statement = $this->db->prepare(
+            'DELETE FROM master_karandash
+            WHERE address = :address'
+        );
+
+        $statement->execute([
+            'address' => $address,
+        ]);
+    }    
+
+
     public function exists(string $address): bool
     {
         $statement = $this->db->prepare(

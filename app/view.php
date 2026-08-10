@@ -651,12 +651,6 @@ $jsVersion = is_file($jsFile)
 
         <input
             type="hidden"
-            name="action"
-            value="karandash_add"
-        >
-
-        <input
-            type="hidden"
             name="return_module"
             value="karandash"
         >
@@ -702,6 +696,21 @@ $jsVersion = is_file($jsFile)
         </label>
 
         <div class="modal-actions">
+            <?php if (current_user() === 'admin'): ?>
+                <button
+                    class="button danger"
+                    type="submit"
+                    name="action"
+                    value="karandash_delete"
+                    formnovalidate
+                    onclick="return confirm(
+                        'Удалить эту запись с карандаша?'
+                    )"
+                >
+                    Удалить
+                </button>
+            <?php endif; ?>
+
             <button
                 class="button"
                 type="button"
@@ -713,6 +722,8 @@ $jsVersion = is_file($jsFile)
             <button
                 class="button primary"
                 type="submit"
+                name="action"
+                value="karandash_add"
             >
                 Сохранить
             </button>
@@ -3342,7 +3353,7 @@ elseif ($module === 'stat'): ?>
                 $subscriberDebt,
                 (string) $house,
                 $tickets->countByAddress($subscriberAddress),
-                (string) ($row['account'] ?? '')
+                $subscriber
             );
             ?>
 
