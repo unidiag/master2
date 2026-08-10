@@ -39,7 +39,7 @@ function render_sms_button(
         data-modal-open="<?= e($modalId) ?>"
         onclick="event.preventDefault(); event.stopPropagation();"
     >
-        SMS
+       ✉ SMS
     </button>
 
     <dialog
