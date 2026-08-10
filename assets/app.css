@@ -3246,12 +3246,13 @@ body.is-page-loading .app-shell {
 
 
 
-.data-subscriber-tickets-count {
+a.subscriber-card__name, .data-subscriber-tickets-count {
     font-weight: bold;
     color:black;
     text-decoration: none;
 }
 
-.data-subscriber-tickets-count:hover {
+a.subscriber-card__name:hover, .data-subscriber-tickets-count:hover {
     color:red;
 }
+

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/SmsButton.php';
+
 /** @var string $title */
 /** @var string $module */
 /** @var string $status */
@@ -342,25 +344,29 @@ $jsVersion = is_file($jsFile)
 
                     ?>
 
-                    <a
-                        class="subscriber-card subscriber-card--link<?= $subscriberCardClass ?>"
-                        href="<?= e(url([
-                            'module' => 'stat',
-                            'house' => $subscriberHouse,
-                            'personal' => (string) ($row['personal'] ?? ''),
-                        ])) ?>"
+
+
+                    <div
+                        class="subscriber-card<?= $subscriberCardClass ?>"
                     >
                         <div>
-                            <strong>
-                                <?= e((string) ($row['account'] ?? '')) ?>
-                            </strong>
+                            <a
+                                class="subscriber-card__name"
+                                href="<?= e(url([
+                                    'module' => 'stat',
+                                    'house' => $subscriberHouse,
+                                    'personal' => (string) ($row['personal'] ?? ''),
+                                ])) ?>"
+                            >
+                                <strong>
+                                    <?= e((string) ($row['account'] ?? '')) ?>
+                                </strong>
+                            </a>
 
                             <div class="muted">
                                 <?= e($address) ?>
                             </div>
                         </div>
-
-                        
 
                         <div>
                             <span class="label">Лицевой счёт</span>
@@ -379,7 +385,7 @@ $jsVersion = is_file($jsFile)
                             <?php else: ?>
                                 <span class="muted">—</span>
                             <?php endif; ?>
-                        </div>                        
+                        </div>
 
                         <div>
                             <span class="label">Тариф</span>
@@ -402,13 +408,20 @@ $jsVersion = is_file($jsFile)
                         </div>
 
                         <div>
-                            <span class="label">Обновление</span>
-
-                            <?= e(format_unix_time(
-                                (string) ($row['update'] ?? '')
-                            )) ?>
+                            <?php
+                            render_sms_button(
+                                $address,
+                                (string) ($row['phone'] ?? ''),
+                                (string) ($row['personal'] ?? ''),
+                                is_numeric($row['summ'] ?? null)
+                                    ? ((float) $row['summ']) / 10000
+                                    : 0.0,
+                                $subscriberHouse
+                            );
+                            ?>
                         </div>
-                    </a>
+                    </div>
+
                 <?php endforeach; ?>
 
 
@@ -3317,6 +3330,18 @@ elseif ($module === 'stat'): ?>
         </div>
 
         <div class="payments-heading__actions">
+
+
+            <?php
+            render_sms_button(
+                $subscriberAddress,
+                $subscriberPhone,
+                $personal,
+                $subscriberDebt,
+                (string) $house
+            );
+            ?>
+
             <button
                 class="button"
                 type="button"
@@ -4762,10 +4787,13 @@ function sortCards() {
             </div>
         </form>
     <?php else: ?>
-        <form method="post">
+        <form
+            method="post"
+            class="ticket-create-form"
+            data-ticket-create-form
+        >
             <div class="modal-head">
                 <h2>Новое подключение</h2>
-
                 <button
                     type="button"
                     class="icon-button"
@@ -4788,33 +4816,37 @@ function sortCards() {
                 value="create"
             >
 
-            <label>
-                Адрес абонента
+            <div class="ticket-create-form__person">
+                <label>
+                    <span>Адрес абонента</span>
+                    <input
+                        class="input"
+                        type="text"
+                        name="address"
+                        maxlength="50"
+                        required
+                        autocomplete="off"
+                        data-subscriber-address
+                        placeholder="Начните вводить улицу"
+                    >
+                </label>
 
-                <input
-                    class="input"
-                    name="address"
-                    maxlength="50"
-                    required
-                    autocomplete="street-address"
-                >
-            </label>
-
-            <label>
-                ФИО
-
-                <input
-                    class="input"
-                    name="abonent"
-                    maxlength="50"
-                    required
-                    autocomplete="name"
-                >
-            </label>
+                <label>
+                    <span>ФИО</span>
+                    <input
+                        class="input"
+                        type="text"
+                        name="abonent"
+                        maxlength="50"
+                        required
+                        autocomplete="name"
+                        data-subscriber-name
+                    >
+                </label>
+            </div>
 
             <label>
                 <span>Род коммутации</span>
-
                 <select
                     class="input select"
                     name="description"
@@ -4851,21 +4883,32 @@ function sortCards() {
             </label>
 
             <label>
-                Дополнительно
-
+                <span>Дополнительно</span>
                 <input
                     class="input"
+                    type="text"
                     name="other"
                     maxlength="50"
+                    autocomplete="off"
                 >
             </label>
 
-            <button
-                class="button primary full"
-                type="submit"
-            >
-                Сохранить
-            </button>
+            <div class="ticket-create-form__actions">
+                <button
+                    class="button primary"
+                    type="submit"
+                >
+                    Сохранить
+                </button>
+
+                <button
+                    class="button button-link"
+                    type="button"
+                    data-modal-close
+                >
+                    Отмена
+                </button>
+            </div>
         </form>
     <?php endif; ?>
 </dialog>

@@ -1,4 +1,5 @@
 /config.local.php
 /.idea/
 /.vscode/
+/sms.txt
 *.log

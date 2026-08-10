@@ -448,7 +448,113 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         30
     );
 
+    /*
+    * Отправка SMS.
+    *
+    * Пока вместо реальной отправки
+    * записываем сообщение в /sms.txt.
+    */
+    if ($postAction === 'sms_send') {
+        verify_csrf();
 
+        $phone = post_string(
+            'phone',
+            100
+        );
+
+        $message = post_string(
+            'message',
+            1000
+        );
+
+        $returnUrl = post_string(
+            'return_url',
+            2000
+        );
+
+        if (
+            $returnUrl === ''
+            || !str_starts_with($returnUrl, '/')
+            || str_starts_with($returnUrl, '//')
+        ) {
+            $returnUrl = '/index.php';
+        }
+
+        $house = post_string(
+            'house',
+            255
+        );
+
+        $personal = post_string(
+            'personal',
+            20
+        );
+
+        $address = post_string(
+            'address',
+            255
+        );
+
+        if ($phone === '') {
+            flash(
+                'error',
+                'Номер телефона не указан.'
+            );
+
+            header(
+                'Location: ' . $returnUrl
+            );
+
+            exit;
+        }
+
+        if ($message === '') {
+            flash(
+                'error',
+                'Текст SMS не указан.'
+            );
+
+            header(
+                'Location: ' . $returnUrl
+            );
+
+            exit;   
+        }
+
+        $sms =
+            "Номер телефона: "
+            . $phone
+            . "\n"
+            . "Адрес: "
+            . $address
+            . "\n"
+            . "Текст сообщения: "
+            . $message
+            . "\n";
+
+        $result = file_put_contents(
+            __DIR__ . '/sms.txt',
+            $sms
+        );
+
+        if ($result === false) {
+            flash(
+                'error',
+                'Не удалось записать sms.txt.'
+            );
+        } else {
+            flash(
+                'success',
+                'SMS сохранено в sms.txt.'
+            );
+        }
+
+        redirect([
+            'module' => 'stat',
+            'house' => $house,
+            'personal' => $personal,
+        ]);
+    }
 
     /*
     * Заметка по дому.

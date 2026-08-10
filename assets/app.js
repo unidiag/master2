@@ -315,12 +315,13 @@ if (ticketCreateForm instanceof HTMLFormElement) {
   );
 
   const streets = [
-    'Заводская-',
+    'Заводская-6-',
     'Молодёжный-',
     'Набережная-',
     'Озмителя-',
     'Панчука-',
     'Энергетиков-',
+    'Садовая-1-'
   ];
 
   let lookupTimer = 0;
@@ -414,7 +415,7 @@ if (ticketCreateForm instanceof HTMLFormElement) {
   };
 
   const isCompleteAddress = (address) => {
-    return /^(Заводская|Молодёжный|Набережная|Озмителя|Панчука|Энергетиков)-[^-]+-[^-]+$/u
+    return /^(Заводская|Молодёжный|Набережная|Озмителя|Панчука|Энергетиков|Садовая)-[^-]+-[^-]+$/u
       .test(address);
   };
 
