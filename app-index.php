@@ -1563,6 +1563,10 @@ if ($module === 'stat') {
             $data['address']
             ?? '';
 
+        $subscriberPhone =
+            $data['phone']
+            ?? '';
+
         $subscriberTariff =
             $data['tariff']
             ?? '';

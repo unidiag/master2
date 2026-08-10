@@ -738,22 +738,12 @@ public function graph(): array
 
                 $phone = '';
 
-                if (isset($fields[12])) {
-                    $phone = preg_replace(
-                        '/\D+/',
-                        '',
-                        (string) $fields[12]
-                    ) ?? '';
+                $phone = '';
 
-                    if (
-                        $phone !== ''
-                        && !preg_match(
-                            '/^\d{5,12}$/',
-                            $phone
-                        )
-                    ) {
-                        $phone = '';
-                    }
+                if (isset($fields[12])) {
+                    $phone = $this->normalizeImportedPhones(
+                        (string) $fields[12]
+                    );
                 }
 
                 /*
@@ -807,6 +797,52 @@ public function graph(): array
             'update' => $update,
         ];
     }
+
+
+
+
+
+    private function normalizeImportedPhones(
+        string $value
+    ): string {
+        $value = trim($value);
+
+        if ($value === '') {
+            return '';
+        }
+
+        $phones = explode(',', $value);
+
+        $result = [];
+
+        foreach ($phones as $phone) {
+            $phone = preg_replace(
+                '/\D+/',
+                '',
+                trim($phone)
+            ) ?? '';
+
+            if ($phone === '') {
+                continue;
+            }
+
+            if (!preg_match('/^\d{5,12}$/', $phone)) {
+                continue;
+            }
+
+            $result[] = $phone;
+        }
+
+        $result = array_slice(
+            array_values(array_unique($result)),
+            0,
+            2
+        );
+
+        return implode(',', $result);
+    }
+
+
 
     private function parseImportedDate(
         string $value
@@ -970,6 +1006,7 @@ private function normalizeImportedSum(
                 id,
                 address,
                 account,
+                phone,
                 tarif,
                 summ,
                 `update`
@@ -1006,6 +1043,9 @@ private function normalizeImportedSum(
             'name' => trim(
                 (string) ($row['account'] ?? '')
             ),
+            'phone' => trim(
+                (string) ($row['phone'] ?? '')
+            ),
             'tariff' => trim(
                 (string) ($row['tarif'] ?? '')
             ),
@@ -1033,12 +1073,18 @@ private function normalizeImportedSum(
                     personal LIKE :personal
                     OR account LIKE :account
                     OR address LIKE :address
+                    OR phone LIKE :phone
                 )
             ';
 
             $params['personal'] = $search . '%';
             $params['account'] = $search . '%';
             $params['address'] = '%' . $search . '%';
+            $params['phone'] = '%' . preg_replace(
+                '/\D+/',
+                '',
+                $search
+            ) . '%';
         }
 
         $count = $this->db->prepare(
@@ -1296,6 +1342,7 @@ private function normalizeImportedSum(
                 db.personal,
                 db.account,
                 db.address,
+                db.phone,
                 db.summ,
                 db.tarif,
                 db.time,
@@ -1353,6 +1400,9 @@ private function normalizeImportedSum(
                 'subscriber' => trim(
                     (string) ($row['account'] ?? '')
                 ),
+                'phone' => trim(
+                    (string) ($row['phone'] ?? '')
+                ),
                 'tariff' => $tariff,
                 'debt' => $debt,
                 'address' => $address,
@@ -1409,6 +1459,7 @@ private function normalizeImportedSum(
                 'number_sort' => $number,
                 'personal' => '',
                 'subscriber' => '',
+                'phone' => '',
                 'tariff' => 'Нет договора',
                 'debt' => 0,
                 'address' => $house . '-' . $number,
@@ -1457,6 +1508,7 @@ private function normalizeImportedSum(
                 'personal' => '',
                 'subscriber' => '',
                 'address' => '',
+                'phone' => '',
                 'payments' => [],
                 'history' => [],
             ];
@@ -1468,6 +1520,7 @@ private function normalizeImportedSum(
                 personal,
                 account,
                 address,
+                phone,
                 summ,
                 tarif,
                 period,
@@ -1528,6 +1581,9 @@ private function normalizeImportedSum(
             'personal' => $personal,
             'subscriber' => trim((string) ($lastRow['account'] ?? '')),
             'address' => trim((string) ($lastRow['address'] ?? '')),
+            'phone' => trim(
+                (string) ($lastRow['phone'] ?? '')
+            ),
             'tariff' => trim((string) ($lastRow['tarif'] ?? '')),
             'debt' => max(0, $currentDebtRaw) / 10000,
             'balance' => $currentDebtRaw / 10000,

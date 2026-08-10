@@ -19,6 +19,7 @@ declare(strict_types=1);
 /** @var string $personal */
 /** @var string $subscriber */
 /** @var string $subscriberAddress */
+/** @var string $subscriberPhone */
 /** @var string $subscriberTariff */
 /** @var string $subscriberOnKarandash */
 /** @var string $subscriberKarandashDescr */
@@ -359,10 +360,26 @@ $jsVersion = is_file($jsFile)
                             </div>
                         </div>
 
+                        
+
                         <div>
                             <span class="label">Лицевой счёт</span>
                             <?= e((string) ($row['personal'] ?? '')) ?>
                         </div>
+
+                        <div>
+                            <span class="label">Телефон</span>
+
+                            <?php if (
+                                trim((string) ($row['phone'] ?? '')) !== ''
+                            ): ?>
+                                <span>
+                                    <?= e((string) $row['phone']) ?>
+                                </span>
+                            <?php else: ?>
+                                <span class="muted">—</span>
+                            <?php endif; ?>
+                        </div>                        
 
                         <div>
                             <span class="label">Тариф</span>
