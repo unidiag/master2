@@ -7,7 +7,9 @@ function render_sms_button(
     string $phone,
     string $personal,
     float $debt,
-    string $house = ''
+    string $house = '',
+    int $ticketsCount = 0,
+    string $abonent = ''
 ): void {
     $address = trim($address);
     $phone = trim($phone);
@@ -39,7 +41,9 @@ function render_sms_button(
         data-modal-open="<?= e($modalId) ?>"
         onclick="event.preventDefault(); event.stopPropagation();"
     >
-       ✉ SMS
+        ✉ SMS <?php if ($ticketsCount > 0): ?>
+            • <?= $ticketsCount ?>
+        <?php endif; ?>
     </button>
 
     <dialog
@@ -49,6 +53,7 @@ function render_sms_button(
     >
         <form
             method="post"
+            data-sms-form
             onclick="event.stopPropagation();"
         >
             <div class="modal-head">
@@ -84,6 +89,12 @@ function render_sms_button(
 
             <input
                 type="hidden"
+                name="abonent"
+                value="<?= e($abonent) ?>"
+            >            
+
+            <input
+                type="hidden"
                 name="house"
                 value="<?= e($house) ?>"
             >
@@ -101,16 +112,36 @@ function render_sms_button(
             >
 
             <label>
-                Номер телефона
+                <span>
+                    Номер телефона
+
+                    <?php if ($ticketsCount > 0): ?>
+                        [<a
+                            class="send_sms_find_tickets"
+                            href="<?= e(url([
+                                'module' => 'zayavki',
+                                'search' => $address,
+                                'status' => 'all',
+                            ])) ?>"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            найти в <?= $ticketsCount ?> заявках
+                        </a>]
+                    <?php endif; ?>
+                </span>
 
                 <input
                     class="input"
-                    type="text"
+                    type="tel"
                     name="phone"
                     value="<?= e($phone) ?>"
-                    maxlength="100"
+                    maxlength="20"
                     required
                     autocomplete="tel"
+                    inputmode="tel"
+                    placeholder="+375291112233"
+                    data-sms-phone
                 >
             </label>
 
@@ -138,6 +169,7 @@ function render_sms_button(
                 <button
                     class="button primary"
                     type="submit"
+                    data-sms-submit
                 >
                     Отправить
                 </button>

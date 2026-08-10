@@ -3245,14 +3245,35 @@ body.is-page-loading .app-shell {
 }
 
 
+.send_sms_find_tickets {
+    display: inline !important;
+    width: auto;
+}
 
-a.subscriber-card__name, .data-subscriber-tickets-count {
+a.send_sms_find_tickets, a.subscriber-card__name, .data-subscriber-tickets-count {
     font-weight: bold;
     color:black;
     text-decoration: none;
 }
 
-a.subscriber-card__name:hover, .data-subscriber-tickets-count:hover {
+a.send_sms_find_tickets:hover, a.subscriber-card__name:hover, .data-subscriber-tickets-count:hover {
     color:red;
 }
 
+
+
+
+.input.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 1px #dc3545;
+}
+
+.input.is-invalid:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 2px rgb(220 53 69 / 20%);
+}
+
+.button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

@@ -462,6 +462,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             100
         );
 
+
+
         $message = post_string(
             'message',
             1000
@@ -480,6 +482,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $returnUrl = '/index.php';
         }
 
+
+        if (!preg_match(
+            '/^\+375(?:29|33|44)\d{7}$/',
+            $phone
+        )) {
+            flash(
+                'error',
+                'Некорректный номер телефона.'
+            );
+
+            header(
+                'Location: ' . $returnUrl
+            );
+
+            exit;
+        }
+
+
         $house = post_string(
             'house',
             255
@@ -492,6 +512,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $address = post_string(
             'address',
+            255
+        );
+
+        $abonent = post_string(
+            'abonent',
             255
         );
 
@@ -518,35 +543,94 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'Location: ' . $returnUrl
             );
 
-            exit;   
+            exit;
         }
 
-        $sms =
-            "Номер телефона: "
-            . $phone
-            . "\n"
-            . "Адрес: "
-            . $address
-            . "\n"
-            . "Текст сообщения: "
-            . $message
-            . "\n";
-
-        $result = file_put_contents(
-            __DIR__ . '/sms.txt',
-            $sms
+        /*
+        * smsgate-x86 ожидает номер без ведущего "+".
+        */
+        $smsPhone = ltrim(
+            $phone,
+            '+'
         );
 
-        if ($result === false) {
+        $remoteCommand =
+            'smsgate-x86'
+            . ' -to '
+            . escapeshellarg($smsPhone)
+            . ' -text '
+            . escapeshellarg($message);
+
+        $command =
+            'ssh'
+            . ' -o BatchMode=yes'
+            . ' -o ConnectTimeout=5'
+            . ' root@192.168.1.16 '
+            . escapeshellarg($remoteCommand)
+            . ' 2>&1';
+
+        $output = [];
+        $exitCode = 0;
+
+        exec(
+            $command,
+            $output,
+            $exitCode
+        );
+
+        // отпарвляем также в телеграм
+        if ($exitCode !== 0) {
             flash(
                 'error',
-                'Не удалось записать sms.txt.'
+                'Не удалось отправить SMS: '
+                . implode(' ', $output)
             );
         } else {
+            /*
+            * SMS реально отправлено.
+            */
             flash(
                 'success',
-                'SMS сохранено в sms.txt.'
+                'SMS успешно отправлено.'
             );
+
+            /*
+            * Уведомляем всех получателей Telegram.
+            */
+            $telegramEnabled =
+                (bool) (
+                    $config['telegram']['enabled']
+                    ?? false
+                );
+
+            $chatIds =
+                $config['telegram']['chat_ids']
+                ?? [];
+
+            if (
+                $telegramEnabled
+                && is_array($chatIds)
+                && $chatIds
+            ) {
+                $telegramMessage =
+                    "✉️ <b>SMS отправлено</b>\n\n"
+                    . '<b>Адрес:</b> '
+                    . telegram_html($address)
+                    . "\n"
+                    . '<b>Абонент:</b> '
+                    . telegram_html($abonent)
+                    . "\n"
+                    . '<b>Телефон:</b> '
+                    . telegram_html($phone)
+                    . "\n"
+                    . '<b>Текст:</b> '
+                    . telegram_html($message);
+
+                $telegram->sendToMany(
+                    $chatIds,
+                    $telegramMessage
+                );
+            }
         }
 
         header(

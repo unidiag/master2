@@ -1133,3 +1133,215 @@ if (
         }
     );
 }
+
+
+
+
+
+/*
+ * SMS: нормализация и проверка номера телефона.
+ *
+ * Допустимый итоговый формат:
+ * +375XXYYYYYYY
+ *
+ * XX:
+ * 29
+ * 33
+ * 44
+ */
+function normalizeSmsPhone(value) {
+  const raw = String(value).trim();
+
+  /*
+   * В базе может быть несколько номеров:
+   *
+   * 12345, 2100375
+   * 12345, +375291112233
+   *
+   * Стационарный пятизначный номер
+   * для SMS не подходит.
+   *
+   * Берём первый номер, содержащий
+   * не менее 7 цифр.
+   */
+  const parts = raw.split(/[,;]/);
+
+  let digits = '';
+
+  for (const part of parts) {
+    const candidate = part.replace(/\D/g, '');
+
+    if (candidate.length >= 7) {
+      digits = candidate;
+      break;
+    }
+  }
+
+  /*
+   * Если разделителей не было,
+   * обрабатываем всё значение.
+   */
+  if (digits === '') {
+    digits = raw.replace(/\D/g, '');
+  }
+
+  /*
+   * Местный семизначный мобильный номер:
+   *
+   * 2100375
+   *
+   * ->
+   *
+   * +375292100375
+   */
+  if (digits.length === 7) {
+    return `+37529${digits}`;
+  }
+
+  /*
+   * 291112233
+   *
+   * ->
+   *
+   * +375291112233
+   */
+  if (digits.length === 9) {
+    return `+375${digits}`;
+  }
+
+  /*
+   * 0291112233
+   *
+   * ->
+   *
+   * +375291112233
+   */
+  if (
+    digits.length === 10
+    && digits.startsWith('0')
+  ) {
+    return `+375${digits.slice(1)}`;
+  }
+
+  /*
+   * 80291112233
+   *
+   * ->
+   *
+   * +375291112233
+   */
+  if (
+    digits.length === 11
+    && digits.startsWith('80')
+  ) {
+    return `+375${digits.slice(2)}`;
+  }
+
+  /*
+   * 375291112233
+   *
+   * ->
+   *
+   * +375291112233
+   */
+  if (
+    digits.length === 12
+    && digits.startsWith('375')
+  ) {
+    return `+${digits}`;
+  }
+
+  return raw;
+}
+
+function isValidSmsPhone(value) {
+  return /^\+375(?:29|33|44)\d{7}$/
+    .test(value);
+}
+
+document
+  .querySelectorAll('[data-sms-form]')
+  .forEach((form) => {
+    if (!(form instanceof HTMLFormElement)) {
+      return;
+    }
+
+    const phoneInput = form.querySelector(
+      '[data-sms-phone]'
+    );
+
+    const submitButton = form.querySelector(
+      '[data-sms-submit]'
+    );
+
+    if (
+      !(phoneInput instanceof HTMLInputElement)
+      || !(submitButton instanceof HTMLButtonElement)
+    ) {
+      return;
+    }
+
+    const validatePhone = () => {
+      const valid = isValidSmsPhone(
+        phoneInput.value
+      );
+
+      phoneInput.classList.toggle(
+        'is-invalid',
+        !valid
+      );
+
+      submitButton.disabled = !valid;
+
+      phoneInput.setCustomValidity(
+        valid
+          ? ''
+          : 'Номер должен иметь формат +375XX1112233, где XX — 29, 33 или 44.'
+      );
+
+      return valid;
+    };
+
+    const normalizePhone = () => {
+      phoneInput.value = normalizeSmsPhone(
+        phoneInput.value
+      );
+
+      validatePhone();
+    };
+
+    /*
+     * Сразу нормализуем номер,
+     * полученный из базы.
+     */
+    normalizePhone();
+
+    /*
+     * Во время ввода только проверяем.
+     */
+    phoneInput.addEventListener(
+      'input',
+      validatePhone
+    );
+
+    /*
+     * После ухода из поля приводим
+     * номер к каноническому виду.
+     */
+    phoneInput.addEventListener(
+      'blur',
+      normalizePhone
+    );
+
+    form.addEventListener(
+      'submit',
+      (event) => {
+        normalizePhone();
+
+        if (!validatePhone()) {
+          event.preventDefault();
+          phoneInput.focus();
+        }
+      }
+    );
+  });

@@ -416,7 +416,9 @@ $jsVersion = is_file($jsFile)
                                 is_numeric($row['summ'] ?? null)
                                     ? ((float) $row['summ']) / 10000
                                     : 0.0,
-                                $subscriberHouse
+                                $subscriberHouse,
+                                $tickets->countByAddress($address),
+                                (string) ($row['account'] ?? '')
                             );
                             ?>
                         </div>
@@ -3338,7 +3340,9 @@ elseif ($module === 'stat'): ?>
                 $subscriberPhone,
                 $personal,
                 $subscriberDebt,
-                (string) $house
+                (string) $house,
+                $tickets->countByAddress($subscriberAddress),
+                (string) ($row['account'] ?? '')
             );
             ?>
 
