@@ -549,11 +549,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
         }
 
-        redirect([
-            'module' => 'stat',
-            'house' => $house,
-            'personal' => $personal,
-        ]);
+        header(
+            'Location: ' . $returnUrl
+        );
+
+        exit;
     }
 
     /*

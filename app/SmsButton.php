@@ -26,7 +26,7 @@ function render_sms_button(
     );
 
     $defaultMessage =
-        'Задолженность по лицевому счёту '
+        'Задолженность по л/с '
         . $personal
         . ' составляет '
         . $debtFormatted
