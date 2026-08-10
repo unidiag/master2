@@ -83,10 +83,15 @@ if (
         $address
     );
 
+    $ticketsCount = $tickets->countByAddress(
+        $address
+    );
+
     echo json_encode(
         [
             'found' => $subscriber !== null,
             'subscriber' => $subscriber,
+            'tickets_count' => $ticketsCount,
         ],
         JSON_UNESCAPED_UNICODE
         | JSON_UNESCAPED_SLASHES

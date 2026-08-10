@@ -4663,9 +4663,30 @@ function sortCards() {
                 </div>
 
                 <div class="ticket-subscriber-info__item">
-                    <span>Задолженность</span>
+                    <span>Телефон</span>
+                    <strong data-subscriber-phone>—</strong>
+                </div>
+
+                <div class="ticket-subscriber-info__item">
+                    <span>Долг</span>
                     <strong data-subscriber-debt>—</strong>
                 </div>
+
+                <div class="ticket-subscriber-info__item">
+                    <span>Всего заявок</span>
+                    <a
+                        data-subscriber-tickets
+                        href="#"
+                        target="_blank"
+                        rel="noopener"
+                        hidden
+                        class="data-subscriber-tickets-count"
+                    >
+                        0
+                    </a>
+                    <strong data-subscriber-tickets-zero>0</strong>
+                </div>
+
             </div>
 
 
@@ -4768,19 +4789,7 @@ function sortCards() {
             >
 
             <label>
-                Абонент
-
-                <input
-                    class="input"
-                    name="abonent"
-                    maxlength="50"
-                    required
-                    autocomplete="name"
-                >
-            </label>
-
-            <label>
-                Адрес
+                Адрес абонента
 
                 <input
                     class="input"
@@ -4788,6 +4797,18 @@ function sortCards() {
                     maxlength="50"
                     required
                     autocomplete="street-address"
+                >
+            </label>
+
+            <label>
+                ФИО
+
+                <input
+                    class="input"
+                    name="abonent"
+                    maxlength="50"
+                    required
+                    autocomplete="name"
                 >
             </label>
 

@@ -117,6 +117,32 @@ final class TicketRepository
         return $q->fetch() ?: null;
     }
 
+
+    public function countByAddress(string $address): int
+    {
+        $address = trim($address);
+
+        if ($address === '') {
+            return 0;
+        }
+
+        $statement = $this->db->prepare(
+            'SELECT COUNT(*)
+            FROM master_zayavki
+            WHERE address = :address
+            OR address_ajax = :address_ajax'
+        );
+
+        $statement->execute([
+            'address' => $address,
+            'address_ajax' => $address,
+        ]);
+
+        return (int) $statement->fetchColumn();
+    }
+
+    
+
     public function create(array $data): void
     {
         $q = $this->db->prepare('INSERT INTO master_zayavki (`time`, abonent, abonent_ajax, address, address_ajax, other, `desc`, result, master, cost, who) VALUES (NOW(), :abonent, :abonent_ajax, :address, :address_ajax, :other, :description, \'\', \'\', :cost, :who)');

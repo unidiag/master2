@@ -3243,3 +3243,15 @@ body.is-page-loading .app-shell {
     font-size: 14px;
     font-weight: 600;
 }
+
+
+
+.data-subscriber-tickets-count {
+    font-weight: bold;
+    color:black;
+    text-decoration: none;
+}
+
+.data-subscriber-tickets-count:hover {
+    color:red;
+}

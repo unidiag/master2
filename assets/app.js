@@ -293,9 +293,22 @@ if (ticketCreateForm instanceof HTMLFormElement) {
     '[data-subscriber-tariff]'
   );
 
+  const phoneElement = ticketCreateForm.querySelector(
+    '[data-subscriber-phone]'
+  );
+
   const debtElement = ticketCreateForm.querySelector(
     '[data-subscriber-debt]'
   );
+
+  const ticketsElement = ticketCreateForm.querySelector(
+    '[data-subscriber-tickets]'
+  );
+
+  const ticketsZeroElement = ticketCreateForm.querySelector(
+    '[data-subscriber-tickets-zero]'
+  );
+
 
   const noteInput = ticketCreateForm.querySelector(
     '[name="other"]'
@@ -346,9 +359,25 @@ if (ticketCreateForm instanceof HTMLFormElement) {
       debtElement.textContent = '—';
     }
 
+    if (phoneElement instanceof HTMLElement) {
+      phoneElement.textContent = '—';
+    }
+
     if (subscriberInfo instanceof HTMLElement) {
       subscriberInfo.hidden = true;
     }
+
+    if (ticketsElement instanceof HTMLAnchorElement) {
+      ticketsElement.textContent = '0';
+      ticketsElement.hidden = true;
+      ticketsElement.removeAttribute('href');
+    }
+
+    if (ticketsZeroElement instanceof HTMLElement) {
+      ticketsZeroElement.textContent = '0';
+      ticketsZeroElement.hidden = false;
+    }
+
 
     lastLookupAddress = '';
   };
@@ -389,7 +418,14 @@ if (ticketCreateForm instanceof HTMLFormElement) {
       .test(address);
   };
 
-  const renderSubscriber = (subscriber) => {
+
+
+
+  const renderSubscriber = (
+    subscriber,
+    ticketsCount,
+    address
+  ) => {
     if (
       !(nameInput instanceof HTMLInputElement)
       || !subscriber
@@ -402,6 +438,11 @@ if (ticketCreateForm instanceof HTMLFormElement) {
     if (tariffElement instanceof HTMLElement) {
       tariffElement.textContent =
         subscriber.tariff || '—';
+    }
+
+    if (phoneElement instanceof HTMLElement) {
+      phoneElement.textContent =
+        subscriber.phone || '—';
     }
 
     if (debtElement instanceof HTMLElement) {
@@ -417,10 +458,62 @@ if (ticketCreateForm instanceof HTMLFormElement) {
         ) + ' руб.';
     }
 
+    const count = Number(ticketsCount || 0);
+
+    if (
+      ticketsElement instanceof HTMLAnchorElement
+      && ticketsZeroElement instanceof HTMLElement
+    ) {
+      if (count > 0) {
+        const ticketsUrl = new URL(
+          window.location.href
+        );
+
+        ticketsUrl.search = '';
+        ticketsUrl.hash = '';
+
+        ticketsUrl.searchParams.set(
+          'module',
+          'zayavki'
+        );
+
+        ticketsUrl.searchParams.set(
+          'search',
+          address
+        );
+
+        ticketsUrl.searchParams.set(
+          'status',
+          'all'
+        );
+
+        ticketsElement.textContent =
+          String(count);
+
+        ticketsElement.href =
+          ticketsUrl.toString();
+
+        ticketsElement.hidden = false;
+        ticketsZeroElement.hidden = true;
+      } else {
+        ticketsElement.textContent = '0';
+        ticketsElement.hidden = true;
+
+        ticketsElement.removeAttribute(
+          'href'
+        );
+
+        ticketsZeroElement.textContent = '0';
+        ticketsZeroElement.hidden = false;
+      }
+    }
+
     if (subscriberInfo instanceof HTMLElement) {
       subscriberInfo.hidden = false;
     }
   };
+
+
 
 
   tariffElement?.addEventListener('click', () => {
@@ -507,7 +600,9 @@ if (ticketCreateForm instanceof HTMLFormElement) {
         && data.subscriber
       ) {
         renderSubscriber(
-          data.subscriber
+          data.subscriber,
+          data.tickets_count,
+          address
         );
 
         return;
