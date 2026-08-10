@@ -1057,81 +1057,108 @@ private function normalizeImportedSum(
 
         
 
-    public function list(string $search, int $limit, int $offset): array
-    {
-        $update = $this->latestUpdate();
+public function list(string $search, int $limit, int $offset): array
+{
+    $update = $this->latestUpdate();
 
-        $where = '`update` = :update';
+    $where = '`update` = :update';
 
-        $params = [
-            'update' => $update,
-        ];
+    $params = [
+        'update' => $update,
+    ];
 
-        if ($search !== '') {
+    if ($search !== '') {
+        $search = trim($search);
+
+        $where .= '
+            AND (
+                personal LIKE :personal
+                OR account LIKE :account
+                OR address LIKE :address
+        ';
+
+        $params['personal'] = $search . '%';
+        $params['account'] = $search . '%';
+        $params['address'] = '%' . $search . '%';
+
+        $phoneSearch = preg_replace(
+            '/\D+/',
+            '',
+            $search
+        ) ?? '';
+
+        if ($phoneSearch !== '') {
             $where .= '
-                AND (
-                    personal LIKE :personal
-                    OR account LIKE :account
-                    OR address LIKE :address
-                    OR phone LIKE :phone
-                )
+                OR phone LIKE :phone
             ';
 
-            $params['personal'] = $search . '%';
-            $params['account'] = $search . '%';
-            $params['address'] = '%' . $search . '%';
-            $params['phone'] = '%' . preg_replace(
-                '/\D+/',
-                '',
-                $search
-            ) . '%';
+            $params['phone'] = '%' . $phoneSearch . '%';
         }
 
-        $count = $this->db->prepare(
-            'SELECT COUNT(*)
-            FROM master_database
-            WHERE ' . $where
-        );
-
-        foreach ($params as $key => $value) {
-            $count->bindValue(
-                ':' . $key,
-                $value,
-                PDO::PARAM_STR
-            );
-        }
-
-        $count->execute();
-
-        $total = (int) $count->fetchColumn();
-
-        $query = $this->db->prepare(
-            'SELECT *
-            FROM master_database
-            WHERE ' . $where . '
-            ORDER BY personal ASC, id DESC
-            LIMIT :limit OFFSET :offset'
-        );
-
-        foreach ($params as $key => $value) {
-            $query->bindValue(
-                ':' . $key,
-                $value,
-                PDO::PARAM_STR
-            );
-        }
-
-        $query->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $query->bindValue(':offset', $offset, PDO::PARAM_INT);
-
-        $query->execute();
-
-        return [
-            'rows' => $query->fetchAll(),
-            'total' => $total,
-            'update' => $update,
-        ];
+        $where .= '
+            )
+        ';
     }
+
+    $count = $this->db->prepare(
+        'SELECT COUNT(*)
+        FROM master_database
+        WHERE ' . $where
+    );
+
+    foreach ($params as $key => $value) {
+        $count->bindValue(
+            ':' . $key,
+            $value,
+            PDO::PARAM_STR
+        );
+    }
+
+    $count->execute();
+
+    $total = (int) $count->fetchColumn();
+
+    $query = $this->db->prepare(
+        'SELECT *
+        FROM master_database
+        WHERE ' . $where . '
+        ORDER BY
+            CASE
+                WHEN TRIM(tarif) = \'Нет договора\' THEN 1
+                ELSE 0
+            END ASC,
+            CAST(summ AS SIGNED) DESC
+        LIMIT :limit OFFSET :offset'
+    );
+
+    foreach ($params as $key => $value) {
+        $query->bindValue(
+            ':' . $key,
+            $value,
+            PDO::PARAM_STR
+        );
+    }
+
+    $query->bindValue(
+        ':limit',
+        $limit,
+        PDO::PARAM_INT
+    );
+
+    $query->bindValue(
+        ':offset',
+        $offset,
+        PDO::PARAM_INT
+    );
+
+    $query->execute();
+
+    return [
+        'rows' => $query->fetchAll(),
+        'total' => $total,
+        'update' => $update,
+    ];
+}
 
     public function history(string $personal): array
     {

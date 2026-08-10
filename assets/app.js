@@ -625,13 +625,47 @@ document.addEventListener('DOMContentLoaded', function () {
         applyStatusFilter
     );
 
+    const searchForm = statusFilter.closest(
+        '.search-form'
+    );
+
+    searchForm?.addEventListener(
+        'submit',
+        function () {
+            const searchInput =
+                searchForm.querySelector(
+                    'input[name="search"]'
+                );
+
+            if (
+                searchInput
+                && searchInput.value.trim() !== ''
+            ) {
+                statusFilter.value = 'all';
+            }
+        }
+    );    
+
+    const searchParams = new URLSearchParams(
+        window.location.search
+    );
+
+    const searchValue = (
+        searchParams.get('search') || ''
+    ).trim();
+
     /*
-     * По умолчанию показываем
-     * только открытые записи.
-     */
-    statusFilter.value = 'open';
+    * При поиске показываем все найденные
+    * записи, включая выполненные.
+    * Без поиска по умолчанию показываем
+    * только открытые.
+    */
+    statusFilter.value = searchValue !== ''
+        ? 'all'
+        : 'open';
 
     applyStatusFilter();
+
 });
 
 
