@@ -1102,6 +1102,13 @@ button,input,select {
     border-color: #16a34a;
 }
 
+.apartment-card--always-zero {
+    border-color: #dc2626 !important;
+    box-shadow:
+        0 0 0 2px #dc2626,
+        0 2px 6px rgba(15, 23, 42, 0.06);
+}
+
 /* Пакет «Государственный» */
 .apartment-card--state-package {
     animation: apartment-state-blink 0.333s step-end infinite;

@@ -3777,6 +3777,13 @@ elseif ($module === 'stat'): ?>
                 ) {
                     $apartmentClass = ' apartment-card--state-package';
                 }
+
+                if (
+                    current_user() !== 'kassa'
+                    && (bool) ($apartment['debt_always_zero'] ?? false)
+                ) {
+                    $apartmentClass .= ' apartment-card--always-zero';
+                }
                 ?>
 
                 <a

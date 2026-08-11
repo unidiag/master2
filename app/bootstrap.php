@@ -15,7 +15,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     $rememberDays = max(
         1,
         min(
-            365,
+            365+30, // 12 месяцев
             (int) (
                 $config['auth']['remember_days']
                 ?? 30

@@ -1400,7 +1400,37 @@ public function list(string $search, int $limit, int $offset): array
                 db.tarif,
                 db.time,
                 db.`update`,
-                COALESCE(k.descr, \'\') AS karandash_descr
+                COALESCE(k.descr, \'\') AS karandash_descr,
+
+                CASE
+                    WHEN db.tarif NOT IN (
+                        \'Нет договора\',
+                        \'Пустая\'
+                    )
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM master_database AS history
+                        WHERE history.personal = db.personal
+                        AND history.tarif NOT IN (
+                            \'Нет договора\',
+                            \'Пустая\'
+                        )
+                        AND CAST(
+                            REPLACE(
+                                REPLACE(
+                                    TRIM(history.summ),
+                                    \' \',
+                                    \'\'
+                                ),
+                                \',\',
+                                \'.\'
+                            ) AS DECIMAL(20,4)
+                        ) <> 0
+                    )
+                    THEN 1
+                    ELSE 0
+                END AS debt_always_zero
+
             FROM master_database AS db
             LEFT JOIN master_karandash AS k
                 ON k.address = db.address
@@ -1463,6 +1493,7 @@ public function list(string $search, int $limit, int $offset): array
                     (string) ($row['karandash_descr'] ?? '')
                 ),
                 'exists' => true,
+                'debt_always_zero' => (int) ($row['debt_always_zero'] ?? 0) === 1,
             ];
 
             /*
@@ -1517,6 +1548,7 @@ public function list(string $search, int $limit, int $offset): array
                 'debt' => 0,
                 'address' => $house . '-' . $number,
                 'karandash_descr' => '',
+                'debt_always_zero' => false,
                 'exists' => false,
             ];
         }
