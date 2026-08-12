@@ -3313,21 +3313,36 @@ elseif ($module === 'stat'): ?>
                 <?php endif; ?>
             </div>
 
-            <div class="<?= $subscriberDebt > 0
-                ? 'payments-heading__debt payments-heading__debt--positive'
-                : 'payments-heading__debt payments-heading__debt--clear'
-            ?>">
-                <span>Задолженность</span>
-
-                <strong>
-                    <?= e(number_format(
-                        $subscriberDebt,
-                        2,
-                        ',',
-                        ' '
-                    )) ?>
-                </strong>
-            </div>
+            <?php 
+            $subscriberBalance = (float) ($paymentHistory['balance'] ?? 0);
+            if ($subscriberBalance < 0): ?>
+                <div class="payments-heading__debt payments-heading__debt--clear">
+                    <span>Аванс</span>
+                    <strong>
+                        <?= e(number_format(
+                            abs($subscriberBalance),
+                            2,
+                            ',',
+                            ' '
+                        )) ?>
+                    </strong>
+                </div>
+            <?php else: ?>
+                <div class="<?= $subscriberDebt > 0
+                    ? 'payments-heading__debt payments-heading__debt--positive'
+                    : 'payments-heading__debt payments-heading__debt--clear'
+                ?>">
+                    <span>Задолженность</span>
+                    <strong>
+                        <?= e(number_format(
+                            $subscriberDebt,
+                            2,
+                            ',',
+                            ' '
+                        )) ?>
+                    </strong>
+                </div>
+            <?php endif; ?>
 
             <?php if ($subscriberKarandashDescr !== ''): ?>
                 <button
