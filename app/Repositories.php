@@ -563,7 +563,7 @@ public function graph(): array
                     THEN summ
                     ELSE 0
                 END
-            ) AS debt_raw
+            ) AS debt
         FROM master_database
         WHERE `update` REGEXP '^[0-9]+$'
           AND TRIM(tarif) IN (
@@ -602,13 +602,12 @@ public function graph(): array
         }
 
         $subscribers = (int) ($row['subscribers'] ?? 0);
-        $debtRaw = (int) ($row['debt_raw'] ?? 0);
+        $debt = (float) ($row['debt'] ?? 0);
 
         $snapshots[$update]['packages'][$tariff] = $subscribers;
         $snapshots[$update]['total'] += $subscribers;
 
-        $snapshots[$update]['debt'] +=
-            $debtRaw / 10000;
+        $snapshots[$update]['debt'] += $debt;
     }
 
     return [
@@ -948,11 +947,11 @@ public function graph(): array
 
 private function normalizeImportedSum(
     string $value
-): int {
+): string {
     $value = trim($value);
 
     if ($value === '') {
-        return 0;
+        return '0.00';
     }
 
     $value = str_replace(
@@ -970,11 +969,14 @@ private function normalizeImportedSum(
     );
 
     if (!is_numeric($value)) {
-        return 0;
+        return '0.00';
     }
 
-    return (int) round(
-        (float) $value * 10000
+    return number_format(
+        (float) $value,
+        2,
+        '.',
+        ''
     );
 }
 
@@ -1058,7 +1060,7 @@ private function normalizeImportedSum(
             return null;
         }
 
-        $sumRaw = $this->parseLegacySum(
+        $sumRaw = $this->parseSum(
             $row['summ'] ?? ''
         );
 
@@ -1075,8 +1077,8 @@ private function normalizeImportedSum(
             'tariff' => trim(
                 (string) ($row['tarif'] ?? '')
             ),
-            'debt' => max(0, $sumRaw) / 10000,
-            'balance' => $sumRaw / 10000,
+            'debt' => max(0, $sumRaw),
+            'balance' => $sumRaw,
         ];
     }
 
@@ -1270,7 +1272,7 @@ public function list(string $search, int $limit, int $offset): array
                 ];
             }
 
-            $sumRaw = $this->parseLegacySum($row['summ'] ?? '');
+            $sumRaw = $this->parseSum($row['summ'] ?? '');
             $tariff = trim((string) ($row['tarif'] ?? ''));
 
             $houses[$house]['subscribers']++;
@@ -1323,7 +1325,7 @@ public function list(string $search, int $limit, int $offset): array
 
 
         foreach ($houses as &$house) {
-            $house['debt'] = $house['debt_raw'] / 10000;
+            $house['debt'] = $house['debt_raw'];
         }
 
         $controlsStatement = $this->db->query(
@@ -1464,7 +1466,7 @@ public function list(string $search, int $limit, int $offset): array
                 continue;
             }
 
-            $sumRaw = $this->parseLegacySum(
+            $sumRaw = $this->parseSum(
                 $row['summ'] ?? ''
             );
 
@@ -1472,7 +1474,7 @@ public function list(string $search, int $limit, int $offset): array
                 (string) ($row['tarif'] ?? '')
             );
 
-            $debt = max(0, $sumRaw) / 10000;
+            $debt = max(0, $sumRaw);
 
             $apartment = [
                 'number' => $apartmentNumber,
@@ -1627,12 +1629,12 @@ public function list(string $search, int $limit, int $offset): array
         $previousDebtRaw = null;
 
         foreach ($rows as $row) {
-            $debtRaw = $this->parseLegacySum($row['summ'] ?? '');
+            $debtRaw = $this->parseSum($row['summ'] ?? '');
             $update = trim((string) ($row['update'] ?? ''));
 
             $history[] = [
                 'update' => $update,
-                'debt' => $debtRaw / 10000,
+                'debt' => $debtRaw,
                 'period' => trim((string) ($row['period'] ?? '')),
             ];
 
@@ -1643,8 +1645,8 @@ public function list(string $search, int $limit, int $offset): array
             ) {
                 $payments[] = [
                     'update' => $update,
-                    'previous_debt' => $previousDebtRaw / 10000,
-                    'current_debt' => $debtRaw / 10000,
+                    'previous_debt' => $previousDebtRaw,
+                    'current_debt' => $debtRaw,
                     'period' => trim((string) ($row['period'] ?? '')),
                 ];
             }
@@ -1654,7 +1656,7 @@ public function list(string $search, int $limit, int $offset): array
 
         $lastRow = $rows ? $rows[count($rows) - 1] : [];
         $currentDebtRaw = $lastRow
-            ? $this->parseLegacySum($lastRow['summ'] ?? '')
+            ? $this->parseSum($lastRow['summ'] ?? '')
             : 0;
 
         /*
@@ -1670,8 +1672,8 @@ public function list(string $search, int $limit, int $offset): array
                 (string) ($lastRow['phone'] ?? '')
             ),
             'tariff' => trim((string) ($lastRow['tarif'] ?? '')),
-            'debt' => max(0, $currentDebtRaw) / 10000,
-            'balance' => $currentDebtRaw / 10000,
+            'debt' => max(0, $currentDebtRaw),
+            'balance' => $currentDebtRaw,
             'payments' => $payments,
             'history' => $history,
         ];
@@ -1746,7 +1748,7 @@ private function lastPaymentUpdates(array $personals): array
                 continue;
             }
 
-            $currentDebtRaw = $this->parseLegacySum(
+            $currentDebtRaw = $this->parseSum(
                 $row['summ'] ?? ''
             );
 
@@ -1831,7 +1833,7 @@ public function debtors(): array
     $debtTotalRaw = 0;
 
     while ($row = $statement->fetch(PDO::FETCH_ASSOC)) {
-        $sumRaw = $this->parseLegacySum(
+        $sumRaw = $this->parseSum(
             $row['summ'] ?? ''
         );
 
@@ -1891,7 +1893,7 @@ public function debtors(): array
             'tariff' => trim(
                 (string) ($row['tarif'] ?? '')
             ),
-            'debt' => $sumRaw / 10000,
+            'debt' => $sumRaw,
             'last_payment_update' => '',
             'karandash_descr' => trim(
                 (string) ($row['karandash_descr'] ?? '')
@@ -1940,7 +1942,7 @@ public function debtors(): array
         unset($houseData['items']);
 
         $houseData['debt'] =
-            ((int) ($houseData['debt_raw'] ?? 0)) / 10000;
+            ((int) ($houseData['debt_raw'] ?? 0));
     }
     unset($houseData);
 
@@ -1965,7 +1967,7 @@ public function debtors(): array
         'update' => $update,
         'houses' => array_values($houses),
         'debtors_total' => $debtorsTotal,
-        'debt_total' => $debtTotalRaw / 10000,
+        'debt_total' => $debtTotalRaw,
     ];
 }
 
@@ -1993,25 +1995,22 @@ public function debtors(): array
         return trim(implode('-', $parts), " \t\n\r\0\x0B-");
     }
 
-    private function parseLegacySum($value): int
+
+    private function parseSum($value): float
     {
+        if ($value === null) {
+            return 0.0;
+        }
+
         $value = trim((string) $value);
 
         if ($value === '') {
-            return 0;
+            return 0.0;
         }
 
-        $value = str_replace(
-            [' ', "\xC2\xA0", ','],
-            ['', '', '.'],
-            $value
-        );
-
-        if (!is_numeric($value)) {
-            return 0;
-        }
-
-        return (int) $value;
+        return is_numeric($value)
+            ? (float) $value
+            : 0.0;
     }
 
 

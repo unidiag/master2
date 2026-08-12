@@ -398,7 +398,7 @@ $jsVersion = is_file($jsFile)
                             <?= e(
                                 is_numeric($row['summ'] ?? null)
                                     ? number_format(
-                                        ((float) $row['summ']) / 10000,
+                                        ((float) $row['summ']),
                                         2,
                                         ',',
                                         ' '
@@ -414,7 +414,7 @@ $jsVersion = is_file($jsFile)
                                 (string) ($row['phone'] ?? ''),
                                 (string) ($row['personal'] ?? ''),
                                 is_numeric($row['summ'] ?? null)
-                                    ? ((float) $row['summ']) / 10000
+                                    ? ((float) $row['summ'])
                                     : 0.0,
                                 $subscriberHouse,
                                 $tickets->countByAddress($address),
