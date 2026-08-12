@@ -1776,6 +1776,58 @@ if ($module === 'stat') {
     );
 
     /*
+     * Если personal не указан,
+     * проверяем house как точный адрес.
+     *
+     * Например:
+     * Заводская-6-5
+     */
+    if (
+        $selectedHouse !== ''
+        && $selectedPersonal === ''
+    ) {
+        $subscriberByAddress =
+            $subscribers->findLatestByAddress(
+                $selectedHouse
+            );
+
+        if ($subscriberByAddress !== null) {
+            $addressPersonal = trim(
+                (string) (
+                    $subscriberByAddress['personal']
+                    ?? ''
+                )
+            );
+
+            if ($addressPersonal !== '') {
+                $selectedPersonal =
+                    $addressPersonal;
+
+                /*
+                 * Из точного адреса получаем дом:
+                 *
+                 * Заводская-6-5
+                 * ->
+                 * Заводская-6
+                 */
+                $addressParts = explode(
+                    '-',
+                    $selectedHouse
+                );
+
+                if (count($addressParts) >= 3) {
+                    array_pop($addressParts);
+
+                    $selectedHouse = implode(
+                        '-',
+                        $addressParts
+                    );
+                }
+            }
+        }
+    }
+
+    /*
      * В шапке сайта показываем название
      * выбранного дома вместо "Статистика".
      */

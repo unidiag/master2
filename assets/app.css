@@ -3284,3 +3284,13 @@ a.send_sms_find_tickets:hover, a.subscriber-card__name:hover, .data-subscriber-t
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+
+.address-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.address-link:hover {
+    text-decoration: underline;
+}

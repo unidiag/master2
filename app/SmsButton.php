@@ -27,12 +27,21 @@ function render_sms_button(
         ''
     );
 
-    $defaultMessage =
-        'Задолженность по л/с '
-        . $personal
-        . ' составляет '
-        . $debtFormatted
-        . ' руб.';
+    if ($debt < 0) {
+        $defaultMessage =
+            'Переплата по л/с '
+            . $personal
+            . ' составляет '
+            . $debtFormatted
+            . ' руб.';
+    } else {
+        $defaultMessage =
+            'Задолженность по л/с '
+            . $personal
+            . ' составляет '
+            . $debtFormatted
+            . ' руб.';
+    }
     ?>
 
     <button

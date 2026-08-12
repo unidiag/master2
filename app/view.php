@@ -216,7 +216,33 @@ $jsVersion = is_file($jsFile)
                     data-status="<?= is_done($row) ? 'done' : 'open' ?>"
                 >
                     <div class="card-head"><div><span class="id">#<?= e($row['id']) ?></span><h2><?= e($row['abonent'] ?: $row['abonent_ajax'] ?: 'Без имени') ?></h2></div><span class="status <?= is_done($row)?'status-done':'status-open' ?>"><?= e(format_datetime($row['time'])) ?></span></div>
-                    <div class="address"><?= e($row['address'] ?: $row['address_ajax'] ?: 'Адрес не указан') ?></div>
+                    <?php
+                    $ticketAddress = trim(
+                        (string) (
+                            $row['address']
+                            ?: $row['address_ajax']
+                            ?: ''
+                        )
+                    );
+                    ?>
+
+                    <div class="address">
+                        <?php if ($ticketAddress !== ''): ?>
+                            <a
+                                class="address-link"
+                                href="<?= e(url([
+                                    'module' => 'stat',
+                                    'house' => $ticketAddress,
+                                ])) ?>"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                <?= e($ticketAddress) ?>
+                            </a>
+                        <?php else: ?>
+                            Адрес не указан
+                        <?php endif; ?>
+                    </div>
                     <p><?= e($row['desc']) ?></p>
                     <?php if ($row['other']): ?><div class="muted"><?= e($row['other']) ?></div><?php endif; ?>
                     <dl class="meta"><?php if (is_done($row)): ?><div><dt>Мастер</dt><dd><?= e($row['master']) ?></dd></div><div><dt>Результат</dt><dd><?= e($row['result']) ?></dd></div><div><dt>Стоимость</dt><dd><?= e($row['cost'] ?: '—') ?></dd></div><?php endif; ?></dl>
@@ -267,7 +293,30 @@ $jsVersion = is_file($jsFile)
                     data-status="<?= is_done($row) ? 'done' : 'open' ?>"
                 >
                     <div class="card-head"><div><span class="id">#<?= e($row['id']) ?></span><h2><?= e($row['abonent'] ?: 'Без имени') ?></h2></div><span class="status <?= is_done($row)?'status-done':'status-open' ?>"><?= e(format_datetime($row['time'])) ?></span></div>
-                    <div class="address"><?= e($row['address'] ?: 'Адрес не указан') ?></div><p><?= e($row['desc']) ?></p>
+                    <?php
+                    $connectionAddress = trim(
+                        (string) ($row['address'] ?? '')
+                    );
+                    ?>
+
+                    <div class="address">
+                        <?php if ($connectionAddress !== ''): ?>
+                            <a
+                                class="address-link"
+                                href="<?= e(url([
+                                    'module' => 'stat',
+                                    'house' => $connectionAddress,
+                                ])) ?>"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                <?= e($connectionAddress) ?>
+                            </a>
+                        <?php else: ?>
+                            Адрес не указан
+                        <?php endif; ?>
+                    </div>                    
+                    <p><?= e($row['desc']) ?></p>
                     <dl class="meta"><?php if (is_done($row)): ?><div><dt>Мастер</dt><dd><?= e($row['master']) ?></dd></div><div><dt>Результат</dt><dd><?= e($row['result']) ?></dd></div><?php endif; ?></dl>
 
                     <div class="actions">

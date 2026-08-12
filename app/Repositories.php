@@ -1032,6 +1032,7 @@ private function normalizeImportedSum(
         $statement = $this->db->prepare(
             'SELECT
                 id,
+                personal,
                 address,
                 account,
                 phone,
@@ -1065,6 +1066,9 @@ private function normalizeImportedSum(
         );
 
         return [
+            'personal' => trim(
+                (string) ($row['personal'] ?? '')
+            ),
             'address' => trim(
                 (string) ($row['address'] ?? '')
             ),
