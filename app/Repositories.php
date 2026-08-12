@@ -1060,7 +1060,7 @@ private function normalizeImportedSum(
             return null;
         }
 
-        $sumRaw = $this->parseSum(
+        $sum = $this->parseSum(
             $row['summ'] ?? ''
         );
 
@@ -1077,8 +1077,8 @@ private function normalizeImportedSum(
             'tariff' => trim(
                 (string) ($row['tarif'] ?? '')
             ),
-            'debt' => max(0, $sumRaw),
-            'balance' => $sumRaw,
+            'debt' => max(0, $sum),
+            'balance' => $sum,
         ];
     }
 
@@ -1259,7 +1259,7 @@ public function list(string $search, int $limit, int $offset): array
                 $houses[$house] = [
                     'house' => $house,
                     'subscribers' => 0,
-                    'debt_raw' => 0,
+                    'debt_total' => 0,
                     'debtors' => 0,
                     'good_payers' => 0,
                     'overpayment' => 0,
@@ -1272,7 +1272,7 @@ public function list(string $search, int $limit, int $offset): array
                 ];
             }
 
-            $sumRaw = $this->parseSum($row['summ'] ?? '');
+            $sum = $this->parseSum($row['summ'] ?? '');
             $tariff = trim((string) ($row['tarif'] ?? ''));
 
             $houses[$house]['subscribers']++;
@@ -1284,11 +1284,11 @@ public function list(string $search, int $limit, int $offset): array
             }
 
             if ($tariff !== 'Нет договора') {
-                if ($sumRaw > 0) {
+                if ($sum > 0) {
                     // Задолженность только по действующим договорам.
-                    $houses[$house]['debt_raw'] += $sumRaw;
+                    $houses[$house]['debt_total'] += $sum;
                     $houses[$house]['debtors']++;
-                } elseif ($sumRaw < 0) {
+                } elseif ($sum < 0) {
                     $houses[$house]['overpayment']++;
                 } else {
                     $houses[$house]['good_payers']++;
@@ -1325,7 +1325,7 @@ public function list(string $search, int $limit, int $offset): array
 
 
         foreach ($houses as &$house) {
-            $house['debt'] = $house['debt_raw'];
+            $house['debt'] = $house['debt_total'];
         }
 
         $controlsStatement = $this->db->query(
@@ -1466,7 +1466,7 @@ public function list(string $search, int $limit, int $offset): array
                 continue;
             }
 
-            $sumRaw = $this->parseSum(
+            $sum = $this->parseSum(
                 $row['summ'] ?? ''
             );
 
@@ -1474,7 +1474,7 @@ public function list(string $search, int $limit, int $offset): array
                 (string) ($row['tarif'] ?? '')
             );
 
-            $debt = max(0, $sumRaw);
+            $debt = max(0, $sum);
 
             $apartment = [
                 'number' => $apartmentNumber,
@@ -1629,29 +1629,29 @@ public function list(string $search, int $limit, int $offset): array
         $previousDebtRaw = null;
 
         foreach ($rows as $row) {
-            $debtRaw = $this->parseSum($row['summ'] ?? '');
+            $debt = $this->parseSum($row['summ'] ?? '');
             $update = trim((string) ($row['update'] ?? ''));
 
             $history[] = [
                 'update' => $update,
-                'debt' => $debtRaw,
+                'debt' => $debt,
                 'period' => trim((string) ($row['period'] ?? '')),
             ];
 
             if (
                 $previousDebtRaw !== null
                 && $previousDebtRaw > 0
-                && $debtRaw <= 0
+                && $debt <= 0
             ) {
                 $payments[] = [
                     'update' => $update,
                     'previous_debt' => $previousDebtRaw,
-                    'current_debt' => $debtRaw,
+                    'current_debt' => $debt,
                     'period' => trim((string) ($row['period'] ?? '')),
                 ];
             }
 
-            $previousDebtRaw = $debtRaw;
+            $previousDebtRaw = $debt;
         }
 
         $lastRow = $rows ? $rows[count($rows) - 1] : [];
@@ -1830,14 +1830,14 @@ public function debtors(): array
     $debtorPersonals = [];
 
     $debtorsTotal = 0;
-    $debtTotalRaw = 0;
+    $debtTotal = 0;
 
     while ($row = $statement->fetch(PDO::FETCH_ASSOC)) {
-        $sumRaw = $this->parseSum(
+        $sum = $this->parseSum(
             $row['summ'] ?? ''
         );
 
-        if ($sumRaw <= 0) {
+        if ($sum <= 0) {
             continue;
         }
 
@@ -1864,7 +1864,7 @@ public function debtors(): array
         if (!isset($houses[$houseName])) {
             $houses[$houseName] = [
                 'house' => $houseName,
-                'debt_raw' => 0,
+                'debt_total' => 0,
                 'items' => [],
             ];
         }
@@ -1880,7 +1880,7 @@ public function debtors(): array
             $debtorPersonals[$personal] = $personal;
         }
 
-        $houses[$houseName]['debt_raw'] += $sumRaw;
+        $houses[$houseName]['debt_total'] += $sum;
 
         $houses[$houseName]['items'][] = [
             'personal' => $personal,
@@ -1893,7 +1893,7 @@ public function debtors(): array
             'tariff' => trim(
                 (string) ($row['tarif'] ?? '')
             ),
-            'debt' => $sumRaw,
+            'debt' => $sum,
             'last_payment_update' => '',
             'karandash_descr' => trim(
                 (string) ($row['karandash_descr'] ?? '')
@@ -1901,7 +1901,7 @@ public function debtors(): array
         ];
 
         $debtorsTotal++;
-        $debtTotalRaw += $sumRaw;
+        $debtTotal += $sum;
     }
 
     $lastPaymentUpdates = $this->lastPaymentUpdates(
@@ -1942,15 +1942,15 @@ public function debtors(): array
         unset($houseData['items']);
 
         $houseData['debt'] =
-            ((int) ($houseData['debt_raw'] ?? 0));
+            ((float) ($houseData['debt_total'] ?? 0));
     }
     unset($houseData);
 
     uasort(
         $houses,
         static function (array $a, array $b): int {
-            $debtA = (int) ($a['debt_raw'] ?? 0);
-            $debtB = (int) ($b['debt_raw'] ?? 0);
+            $debtA = (float) ($a['debt_total'] ?? 0);
+            $debtB = (float) ($b['debt_total'] ?? 0);
 
             if ($debtA !== $debtB) {
                 return $debtA < $debtB ? 1 : -1;
@@ -1967,7 +1967,7 @@ public function debtors(): array
         'update' => $update,
         'houses' => array_values($houses),
         'debtors_total' => $debtorsTotal,
-        'debt_total' => $debtTotalRaw,
+        'debt_total' => $debtTotal,
     ];
 }
 
