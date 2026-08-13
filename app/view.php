@@ -3877,6 +3877,8 @@ elseif ($module === 'stat'): ?>
                     $apartmentClass = ' apartment-card--analog';
                 } elseif ($tariff === 'Цифровой пакет') {
                     $apartmentClass = ' apartment-card--digital';
+                } elseif ($tariff === 'IPTV') {
+                    $apartmentClass = ' apartment-card--iptv';
                 } elseif (
                     str_contains(
                         mb_strtolower($tariff, 'UTF-8'),
@@ -4471,11 +4473,13 @@ function sortCards() {
     $stateChannelsTotal = 0;
     $analogPackageTotal = 0;
     $digitalPackageTotal = 0;
+    $iptvPackageTotal = 0;
 
     foreach ($houses as $house) {
         $stateChannelsTotal += (int) ($house['state_channels'] ?? 0);
         $analogPackageTotal += (int) ($house['analog_package'] ?? 0);
         $digitalPackageTotal += (int) ($house['digital_package'] ?? 0);
+        $iptvPackageTotal += (int) ($house['iptv_package'] ?? 0);
     }
 
     $connectedTotal =
@@ -4493,6 +4497,10 @@ function sortCards() {
 
     $digitalPackagePercent = $connectedTotal > 0
         ? ($digitalPackageTotal / $connectedTotal) * 100
+        : 0;
+
+    $iptvPackagePercent = $connectedTotal > 0
+        ? ($iptvPackageTotal / $connectedTotal) * 100
         : 0;
 
 
@@ -4534,14 +4542,14 @@ function sortCards() {
 
             <div
                 class="page-heading__packages"
-                title="Государственные каналы / Аналоговый пакет / Цифровой пакет"
+                title="Государственные каналы / Аналоговый пакет / Цифровой пакет / IPTV"
             >
                 <span class="page-heading__packages-count">
-                    <?= e(number_format($stateChannelsTotal, 0, ',', ' ')) ?>/<?= e(number_format($analogPackageTotal, 0, ',', ' ')) ?>/<?= e(number_format($digitalPackageTotal, 0, ',', ' ')) ?>
+                    <?= e(number_format($stateChannelsTotal, 0, ',', ' ')) ?>/<?= e(number_format($analogPackageTotal, 0, ',', ' ')) ?>/<?= e(number_format($digitalPackageTotal, 0, ',', ' ')) ?>/<?= e(number_format($iptvPackageTotal, 0, ',', ' ')) ?>
                 </span>
 
                 <span class="page-heading__packages-percent">
-                    <?= e(number_format($stateChannelsPercent, 0, ',', ' ')) ?>%/<?= e(number_format($analogPackagePercent, 0, ',', ' ')) ?>%/<?= e(number_format($digitalPackagePercent, 0, ',', ' ')) ?>%
+                    <?= e(number_format($stateChannelsPercent, 0, ',', ' ')) ?>%/<?= e(number_format($analogPackagePercent, 0, ',', ' ')) ?>%/<?= e(number_format($digitalPackagePercent, 0, ',', ' ')) ?>%/<?= e(number_format($iptvPackagePercent, 0, ',', ' ')) ?>%
                 </span>
             </div>
         </div>
@@ -4588,6 +4596,7 @@ function sortCards() {
                 $stateChannels = (int) ($house['state_channels'] ?? 0);
                 $analogPackage = (int) ($house['analog_package'] ?? 0);
                 $digitalPackage = (int) ($house['digital_package'] ?? 0);
+                $iptvPackage = (int) ($house['iptv_package'] ?? 0);
                 $subscribers = (int) ($house['subscribers'] ?? 0);
 
                 $connected = $stateChannels + $analogPackage + $digitalPackage;
@@ -4628,6 +4637,7 @@ function sortCards() {
                     $stateChannels = (int) ($house['state_channels'] ?? 0);
                     $analogPackage = (int) ($house['analog_package'] ?? 0);
                     $digitalPackage = (int) ($house['digital_package'] ?? 0);
+                    $iptvPackage = (int) ($house['iptv_package'] ?? 0);
                     $subscribers = (int) ($house['subscribers'] ?? 0);
 
                     $connected = $stateChannels + $analogPackage + $digitalPackage;
@@ -4655,9 +4665,9 @@ function sortCards() {
 
                             <span
                                 class="house-card__subtitle"
-                                title="Государственные каналы / Аналоговый пакет / Цифровой пакет"
+                                title="Государственные каналы / Аналоговый пакет / Цифровой пакет / IPTV"
                             >
-                                <?= e((int) ($house['state_channels'] ?? 0)) ?>/<?= e((int) ($house['analog_package'] ?? 0)) ?>/<?= e((int) ($house['digital_package'] ?? 0)) ?>
+                                <?= e((int) ($house['state_channels'] ?? 0)) ?>/<?= e((int) ($house['analog_package'] ?? 0)) ?>/<?= e((int) ($house['digital_package'] ?? 0)) ?>/<?= e((int) ($house['iptv_package'] ?? 0)) ?>
                                 из
                                 <?= e((int) ($house['subscribers'] ?? 0)) ?>
                                 квартир
@@ -5004,6 +5014,10 @@ function sortCards() {
 
                     <option value="подключить цифровой пакет">
                         подключить цифровой пакет
+                    </option>
+
+                    <option value="подключить IPTV пакет">
+                        подключить IPTV
                     </option>
 
                     <option value="переезд на другой адрес">

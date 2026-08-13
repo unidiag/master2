@@ -550,6 +550,7 @@ public function graph(): array
         'Государственные каналы',
         'Аналоговый пакет',
         'Цифровой пакет',
+        'IPTV'
     ];
 
     $statement = $this->db->query(
@@ -569,7 +570,8 @@ public function graph(): array
           AND TRIM(tarif) IN (
               'Государственные каналы',
               'Аналоговый пакет',
-              'Цифровой пакет'
+              'Цифровой пакет',
+              'IPTV'
           )
         GROUP BY
             CAST(`update` AS UNSIGNED),
@@ -595,6 +597,7 @@ public function graph(): array
                     'Государственные каналы' => 0,
                     'Аналоговый пакет' => 0,
                     'Цифровой пакет' => 0,
+                    'IPTV' => 0,
                 ],
                 'total' => 0,
                 'debt' => 0.0,
@@ -1307,6 +1310,8 @@ public function list(string $search, int $limit, int $offset): array
                 $houses[$house]['analog_package']++;
             } elseif ($tariff === 'Цифровой пакет') {
                 $houses[$house]['digital_package']++;
+            } elseif ($tariff === 'IPTV') {
+                $houses[$house]['iptv_package']++;
             }
 
             $rowTime = trim((string) ($row['time'] ?? ''));

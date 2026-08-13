@@ -1102,6 +1102,12 @@ button,input,select {
     border-color: #16a34a;
 }
 
+.apartment-card--iptv {
+    background: #fd86e9;
+    border-color: #f713a3;
+}
+
+
 .apartment-card--always-zero {
     border-color: #dc2626 !important;
     box-shadow:
