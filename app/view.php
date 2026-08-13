@@ -171,58 +171,73 @@ $jsVersion = is_file($jsFile)
  
         <?php if (in_array($module, ['zayavki','podkluchki','database'], true) && !($module === 'database' && $action === 'history')): ?>
             <section class="toolbar">
-                <form class="search-form" method="get">
-                    <input type="hidden" name="module" value="<?= e($module) ?>">
-                    <input class="input" type="search" name="search" value="<?= e($search) ?>" placeholder="Поиск…" autocomplete="off">
-                    <?php if ($module !== 'database'): ?>
-                    <select
-                        class="input select"
-                        id="status-filter"
-                        name="status"
-                    >
-                        <option value="all">
-                            Все
-                        </option>
+  <form class="search-form" method="get">
+    <input
+        type="hidden"
+        name="module"
+        value="<?= e($module) ?>"
+    >
 
-                        <option value="open" selected>
-                            Открытые
-                        </option>
+    <?php if (
+        $module === 'database'
+        && $withoutCharges
+    ): ?>
+        <input
+            type="hidden"
+            name="without_charges"
+            value="1"
+        >
+    <?php endif; ?>
 
-                        <option value="done">
-                            Выполненные
-                        </option>
-                    </select>
-                <?php endif; ?>
+    <?php if (
+        $module === 'database'
+        && $withoutPayments
+    ): ?>
+        <input
+            type="hidden"
+            name="without_payments"
+            value="1"
+        >
+    <?php endif; ?>
 
-                <button class="button" type="submit">
-                    Найти
-                </button>
+    <input
+        class="input"
+        type="search"
+        name="search"
+        value="<?= e($search) ?>"
+        placeholder="Поиск…"
+        autocomplete="off"
+    >
 
-                <?php if ($module === 'database'): ?>
+    <?php if ($module !== 'database'): ?>
 
-                    <label class="search-checkbox">
-                        <input
-                            type="checkbox"
-                            name="without_charges"
-                            value="1"
-                            <?= $withoutCharges ? 'checked' : '' ?>
-                        >
-                        <span>Без начислений</span>
-                    </label>
+        <select
+            class="input select"
+            id="status-filter"
+            name="status"
+        >
+            <option value="all">
+                Все
+            </option>
 
-                    <label class="search-checkbox">
-                        <input
-                            type="checkbox"
-                            name="without_payments"
-                            value="1"
-                            <?= $withoutPayments ? 'checked' : '' ?>
-                        >
-                        <span>Без оплаты</span>
-                    </label>
+            <option value="open" selected>
+                Открытые
+            </option>
 
-                <?php endif; ?>
+            <option value="done">
+                Выполненные
+            </option>
+        </select>
 
-                </form>
+    <?php endif; ?>
+
+    <button
+        class="button"
+        type="submit"
+    >
+        Найти
+    </button>
+</form>
                 <?php if ($module !== 'database'): ?>
                     <button
                         class="button primary"
@@ -233,6 +248,71 @@ $jsVersion = is_file($jsFile)
                     </button>
 
                 <?php else: ?>
+
+
+
+
+<?php if ($module === 'database'): ?>
+
+    <?php
+    /*
+     * Без начислений.
+     */
+    $withoutChargesParams = [
+        'module' => 'database',
+    ];
+
+    if ($search !== '') {
+        $withoutChargesParams['search'] = $search;
+    }
+
+    if (!$withoutCharges) {
+        $withoutChargesParams['without_charges'] = '1';
+    }
+
+    if ($withoutPayments) {
+        $withoutChargesParams['without_payments'] = '1';
+    }
+
+
+    /*
+     * Без оплаты.
+     */
+    $withoutPaymentsParams = [
+        'module' => 'database',
+    ];
+
+    if ($search !== '') {
+        $withoutPaymentsParams['search'] = $search;
+    }
+
+    if ($withoutCharges) {
+        $withoutPaymentsParams['without_charges'] = '1';
+    }
+
+    if (!$withoutPayments) {
+        $withoutPaymentsParams['without_payments'] = '1';
+    }
+    ?>
+
+    <a
+        class="button <?= $withoutCharges ? 'primary' : '' ?>"
+        href="<?= e(url($withoutChargesParams)) ?>"
+    >
+        Без начислений
+    </a>
+
+    <a
+        class="button <?= $withoutPayments ? 'primary' : '' ?>"
+        href="<?= e(url($withoutPaymentsParams)) ?>"
+    >
+        Без оплаты
+    </a>
+
+<?php endif; ?>
+
+
+
 
                     <button
                         class="button primary"

@@ -1141,72 +1141,89 @@ public function list(
         ';
     }
 
+
     /*
-     * Без начислений:
-     *
-     * исключаем абонента, если хотя бы в одном
-     * историческом снимке его задолженность
-     * стала больше предыдущей.
-     */
+    * Сумма задолженности в предыдущем снимке.
+    *
+    * Важно:
+    * сравниваем именно с предыдущим UPDATE,
+    * а не с предыдущей строкой id внутри того же снимка.
+    */
+    $previousSumSql = '
+        (
+            SELECT CAST(
+                REPLACE(
+                    REPLACE(
+                        TRIM(previous.summ),
+                        \' \',
+                        \'\'
+                    ),
+                    \',\',
+                    \'.\'
+                ) AS DECIMAL(20,4)
+            )
+            FROM master_database AS previous
+            WHERE previous.personal = current_db.personal
+            AND previous.`update` REGEXP \'^[0-9]+$\'
+            AND CAST(previous.`update` AS UNSIGNED)
+                < CAST(current_db.`update` AS UNSIGNED)
+            ORDER BY
+                CAST(previous.`update` AS UNSIGNED) DESC,
+                previous.id DESC
+            LIMIT 1
+        )
+    ';
+
+    $currentSumSql = '
+        CAST(
+            REPLACE(
+                REPLACE(
+                    TRIM(current_db.summ),
+                    \' \',
+                    \'\'
+                ),
+                \',\',
+                \'.\'
+            ) AS DECIMAL(20,4)
+        )
+    ';
+
+
+    /*
+    * Без начислений.
+    *
+    * Последний снимок не должен показывать увеличение
+    * задолженности относительно предыдущего.
+    *
+    * current <= previous
+    */
     if ($withoutCharges) {
         $where .= '
-            AND NOT EXISTS (
-                SELECT 1
-                FROM master_database AS history
-                WHERE history.personal = current_db.personal
-                AND CAST(history.summ AS DECIMAL(20,4)) > (
-                    SELECT CAST(previous.summ AS DECIMAL(20,4))
-                    FROM master_database AS previous
-                    WHERE previous.personal = history.personal
-                    AND (
-                        CAST(previous.`update` AS UNSIGNED)
-                            < CAST(history.`update` AS UNSIGNED)
-                        OR (
-                            CAST(previous.`update` AS UNSIGNED)
-                                = CAST(history.`update` AS UNSIGNED)
-                            AND previous.id < history.id
-                        )
-                    )
-                    ORDER BY
-                        CAST(previous.`update` AS UNSIGNED) DESC,
-                        previous.id DESC
-                    LIMIT 1
-                )
+            AND (
+                ' . $previousSumSql . ' IS NULL
+                OR
+                ' . $currentSumSql . '
+                    <= ' . $previousSumSql . '
             )
         ';
     }
 
+
     /*
-     * Без оплаты:
-     *
-     * исключаем абонента, если хотя бы в одном
-     * историческом снимке его задолженность
-     * стала меньше предыдущей.
-     */
+    * Без оплаты.
+    *
+    * Последний снимок не должен показывать уменьшение
+    * задолженности относительно предыдущего.
+    *
+    * current >= previous
+    */
     if ($withoutPayments) {
         $where .= '
-            AND NOT EXISTS (
-                SELECT 1
-                FROM master_database AS history
-                WHERE history.personal = current_db.personal
-                AND CAST(history.summ AS DECIMAL(20,4)) < (
-                    SELECT CAST(previous.summ AS DECIMAL(20,4))
-                    FROM master_database AS previous
-                    WHERE previous.personal = history.personal
-                    AND (
-                        CAST(previous.`update` AS UNSIGNED)
-                            < CAST(history.`update` AS UNSIGNED)
-                        OR (
-                            CAST(previous.`update` AS UNSIGNED)
-                                = CAST(history.`update` AS UNSIGNED)
-                            AND previous.id < history.id
-                        )
-                    )
-                    ORDER BY
-                        CAST(previous.`update` AS UNSIGNED) DESC,
-                        previous.id DESC
-                    LIMIT 1
-                )
+            AND (
+                ' . $previousSumSql . ' IS NULL
+                OR
+                ' . $currentSumSql . '
+                    >= ' . $previousSumSql . '
             )
         ';
     }
