@@ -2207,9 +2207,21 @@ $graphMaxDebtDate = null;
 $graphMinDebt = 0.0;
 $graphMinDebtDate = null;
 
+$graphCurrentDebt = 0.0;
+$graphCurrentPeriodIncome = 0.0;
+
 if ($graphSnapshots) {
     $graphMaxDebt = max($graphDebts);
     $graphMinDebt = min($graphDebts);
+
+    /*
+     * Текущая задолженность —
+     * задолженность последнего снимка.
+     */
+    $graphCurrentDebt = (float) (
+        $latestSnapshot['debt']
+        ?? 0
+    );
 
     foreach ($graphSnapshots as $snapshot) {
         $debt = (float) (
@@ -2222,27 +2234,36 @@ if ($graphSnapshots) {
             ?? 0
         );
 
-        if (
-            $graphMaxDebtDate === null
-            && $debt === $graphMaxDebt
-        ) {
+        /*
+         * Нам нужна именно ПОСЛЕДНЯЯ дата,
+         * когда задолженность находилась
+         * на максимальном уровне.
+         *
+         * Поэтому здесь нет проверки === null.
+         */
+        if ($debt === $graphMaxDebt) {
             $graphMaxDebtDate = $update;
         }
 
+        /*
+         * Для минимальной пока оставляем
+         * первую найденную дату, как было раньше.
+         */
         if (
             $graphMinDebtDate === null
             && $debt === $graphMinDebt
         ) {
             $graphMinDebtDate = $update;
         }
-
-        if (
-            $graphMaxDebtDate !== null
-            && $graphMinDebtDate !== null
-        ) {
-            break;
-        }
     }
+
+    /*
+     * Сколько задолженности погашено
+     * с последнего максимума до текущего момента.
+     */
+    $graphCurrentPeriodIncome =
+        $graphMaxDebt
+        - $graphCurrentDebt;
 }
 ?>
 
@@ -2271,6 +2292,18 @@ if ($graphSnapshots) {
                             ',',
                             ' '
                         )) ?>
+                    </strong>
+                </div>
+
+                <div>
+                    <span>Заработано за период</span>
+                    <strong>
+                        <?= e(number_format(
+                            $graphCurrentPeriodIncome,
+                            2,
+                            ',',
+                            ' '
+                        )) ?> р.
                     </strong>
                 </div>
 
@@ -3598,44 +3631,55 @@ elseif ($module === 'stat'): ?>
 
         <?php if (!$payments): ?>
             <div class="empty-state">
-                <strong>Оплаты не обнаружены</strong>
-
+                <strong>Операции не обнаружены</strong>
                 <span>
-                    В истории нет переходов от задолженности к нулевому
-                    или отрицательному балансу.
+                    В истории нет изменений задолженности.
                 </span>
             </div>
         <?php else: ?>
-            <div class="payment-list">
-                <?php foreach ($payments as $payment): ?>
-                    <?php
-                    $paymentUpdate = (string) ($payment['update'] ?? '');
-                    $previousDebt = (float) ($payment['previous_debt'] ?? 0);
-                    ?>
+            <?php foreach ($payments as $payment): ?>
+                <?php
+                $paymentUpdate = (string) ($payment['update'] ?? '');
+                $amount = (float) ($payment['amount'] ?? 0);
+                $currentDebt = (float) ($payment['current_debt'] ?? 0);
+                $type = (string) ($payment['type'] ?? 'payment');
 
-                    <article class="payment-item">
-                        <div class="payment-item__date">
-                            <?= e(format_unix_time(
-                                $paymentUpdate,
-                                'd.m.Y'
-                            )) ?>
-                        </div>
+                $isPayment = $type === 'payment';
+                ?>
 
-                        <div class="payment-item__description">
-                            Погашена задолженность
-                        </div>
+                <article class="payment-item payment-item--<?= $isPayment ? 'payment' : 'charge' ?>">
+                    <div class="payment-item__date">
+                        <?= e(format_unix_time(
+                            $paymentUpdate,
+                            'd.m.Y'
+                        )) ?>
+                    </div>
 
-                        <div class="payment-item__amount">
-                            <?= e(number_format(
-                                $previousDebt,
+                    <div class="payment-item__description">
+                        <?= $isPayment ? 'Оплата' : 'Начислено' ?>
+                    </div>
+
+                    <div class="payment-item__amount">
+                        <span class="payment-item__operation-sum">
+                            <?= $isPayment ? '−' : '+' ?><?= e(number_format(
+                                $amount,
                                 2,
                                 ',',
                                 ' '
                             )) ?>
-                        </div>
-                    </article>
-                <?php endforeach; ?>
-            </div>
+                        </span>
+
+                        <span class="payment-item__balance">
+                            <?= e(number_format(
+                                $currentDebt,
+                                2,
+                                ',',
+                                ' '
+                            )) ?>
+                        </span>
+                    </div>
+                </article>
+            <?php endforeach; ?>
         <?php endif; ?>
     </section>
 

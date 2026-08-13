@@ -1600,7 +1600,7 @@ public function list(string $search, int $limit, int $offset): array
                 'subscriber' => '',
                 'address' => '',
                 'phone' => '',
-                'payments' => [],
+                'operations' => [],
                 'history' => [],
             ];
         }
@@ -1628,7 +1628,7 @@ public function list(string $search, int $limit, int $offset): array
 
         $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-        $payments = [];
+        $operations = [];
         $history = [];
         $previousDebtRaw = null;
 
@@ -1642,43 +1642,58 @@ public function list(string $search, int $limit, int $offset): array
                 'period' => trim((string) ($row['period'] ?? '')),
             ];
 
-            if (
-                $previousDebtRaw !== null
-                && $previousDebtRaw > 0
-                && $debt <= 0
-            ) {
-                $payments[] = [
-                    'update' => $update,
-                    'previous_debt' => $previousDebtRaw,
-                    'current_debt' => $debt,
-                    'period' => trim((string) ($row['period'] ?? '')),
-                ];
+            if ($previousDebtRaw !== null) {
+                /*
+                * Задолженность уменьшилась — была оплата.
+                */
+                if ($debt < $previousDebtRaw) {
+                    $operations[] = [
+                        'type' => 'payment',
+                        'update' => $update,
+                        'previous_debt' => $previousDebtRaw,
+                        'current_debt' => $debt,
+                        'amount' => $previousDebtRaw - $debt,
+                        'period' => trim((string) ($row['period'] ?? '')),
+                    ];
+                }
+
+                /*
+                * Задолженность увеличилась — было начисление.
+                */
+                if ($debt > $previousDebtRaw) {
+                    $operations[] = [
+                        'type' => 'charge',
+                        'update' => $update,
+                        'previous_debt' => $previousDebtRaw,
+                        'current_debt' => $debt,
+                        'amount' => $debt - $previousDebtRaw,
+                        'period' => trim((string) ($row['period'] ?? '')),
+                    ];
+                }
             }
 
             $previousDebtRaw = $debt;
         }
+
+        $operations = array_reverse($operations);
 
         $lastRow = $rows ? $rows[count($rows) - 1] : [];
         $currentDebtRaw = $lastRow
             ? $this->parseSum($lastRow['summ'] ?? '')
             : 0;
 
-        /*
-        * Новые оплаты сверху.
-        */
-        $payments = array_reverse($payments);
 
         return [
             'personal' => $personal,
             'subscriber' => trim((string) ($lastRow['account'] ?? '')),
             'address' => trim((string) ($lastRow['address'] ?? '')),
-            'phone' => trim(
-                (string) ($lastRow['phone'] ?? '')
-            ),
+            'phone' => trim((string) ($lastRow['phone'] ?? '')),
             'tariff' => trim((string) ($lastRow['tarif'] ?? '')),
             'debt' => max(0, $currentDebtRaw),
             'balance' => $currentDebtRaw,
-            'payments' => $payments,
+
+            'operations' => $operations,
+
             'history' => $history,
         ];
     }
@@ -1760,21 +1775,13 @@ private function lastPaymentUpdates(array $personals): array
                 $previousDebtByPersonal[$personal] ?? null;
 
             /*
-             * Оплата обнаружена:
-             *
-             * до обновления задолженность была положительной,
-             * после обновления стала нулевой или отрицательной.
-             */
+            * Любое уменьшение задолженности считаем оплатой.
+            * Это также учитывает аванс (отрицательную задолженность).
+            */
             if (
                 $previousDebtRaw !== null
-                && $previousDebtRaw > 0
-                && $currentDebtRaw <= 0
+                && $currentDebtRaw < $previousDebtRaw
             ) {
-                /*
-                 * История идёт от старой к новой.
-                 * Поэтому последнее присвоение и будет
-                 * последней обнаруженной оплатой.
-                 */
                 $result[$personal] = trim(
                     (string) ($row['update'] ?? '')
                 );

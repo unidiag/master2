@@ -1848,7 +1848,7 @@ if ($module === 'stat') {
         $apartments = [];
 
         $payments =
-            $data['payments']
+            $data['operations']
             ?? [];
 
         $house = $selectedHouse;

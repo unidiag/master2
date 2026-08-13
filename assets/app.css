@@ -3294,3 +3294,27 @@ a.send_sms_find_tickets:hover, a.subscriber-card__name:hover, .data-subscriber-t
 .address-link:hover {
     text-decoration: underline;
 }
+
+
+
+.payment-item--payment .payment-item__description,
+.payment-item--payment .payment-item__amount {
+    color: #2e7d32;
+}
+
+.payment-item--charge .payment-item__description,
+.payment-item--charge .payment-item__amount {
+    color: #d32f2f;
+}
+
+
+.payment-item__amount {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.payment-item__balance {
+    color: var(--muted);
+    font-weight: 400;
+}
