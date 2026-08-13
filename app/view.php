@@ -4485,7 +4485,8 @@ function sortCards() {
     $connectedTotal =
         $stateChannelsTotal
         + $analogPackageTotal
-        + $digitalPackageTotal;
+        + $digitalPackageTotal
+        + $iptvPackageTotal;
 
     $stateChannelsPercent = $connectedTotal > 0
         ? ($stateChannelsTotal / $connectedTotal) * 100
@@ -4599,7 +4600,7 @@ function sortCards() {
                 $iptvPackage = (int) ($house['iptv_package'] ?? 0);
                 $subscribers = (int) ($house['subscribers'] ?? 0);
 
-                $connected = $stateChannels + $analogPackage + $digitalPackage;
+                $connected = $stateChannels + $analogPackage + $digitalPackage + $iptvPackage;
 
                 $penetration = $subscribers > 0
                     ? round(($connected / $subscribers) * 100, 1)
@@ -4640,7 +4641,7 @@ function sortCards() {
                     $iptvPackage = (int) ($house['iptv_package'] ?? 0);
                     $subscribers = (int) ($house['subscribers'] ?? 0);
 
-                    $connected = $stateChannels + $analogPackage + $digitalPackage;
+                    $connected = $stateChannels + $analogPackage + $digitalPackage + $iptvPackage;
 
                     $penetration = $subscribers > 0
                         ? round(($connected / $subscribers) * 100, 1)
