@@ -541,7 +541,29 @@ final class SubscriberRepository
     }
 
 
+private function latestUpdates(int $limit = 2): array
+{
+    $limit = max(1, min(10, $limit));
 
+    $statement = $this->db->query(
+        "SELECT DISTINCT `update`
+         FROM master_database
+         WHERE `update` IS NOT NULL
+           AND `update` <> ''
+         ORDER BY `update` DESC
+         LIMIT " . $limit
+    );
+
+    return array_values(
+        array_filter(
+            array_map(
+                static fn($value): string => trim((string) $value),
+                $statement->fetchAll(PDO::FETCH_COLUMN)
+            ),
+            static fn(string $value): bool => $value !== ''
+        )
+    );
+}
 
 
 public function graph(): array
@@ -1099,23 +1121,41 @@ public function list(
     int $limit,
     int $offset
 ): array {
-    $update = $this->latestUpdate();
+    /*
+     * Получаем два последних снимка.
+     */
+    $updates = $this->latestUpdates(2);
 
-    $where = 'current_db.`update` = :update';
+    $update = $updates[0] ?? '';
+    $previousUpdate = $updates[1] ?? '';
+
+    if ($update === '') {
+        return [
+            'rows' => [],
+            'total' => 0,
+            'update' => '',
+        ];
+    }
+
+    $where = [
+        'current_db.`update` = :update',
+    ];
 
     $params = [
         'update' => $update,
     ];
 
-    if ($search !== '') {
-        $search = trim($search);
+    /*
+     * Поиск.
+     */
+    $search = trim($search);
 
-        $where .= '
-            AND (
-                current_db.personal LIKE :personal
-                OR current_db.account LIKE :account
-                OR current_db.address LIKE :address
-        ';
+    if ($search !== '') {
+        $searchParts = [
+            'current_db.personal LIKE :personal',
+            'current_db.account LIKE :account',
+            'current_db.address LIKE :address',
+        ];
 
         $params['personal'] = $search . '%';
         $params['account'] = $search . '%';
@@ -1128,110 +1168,150 @@ public function list(
         ) ?? '';
 
         if ($phoneSearch !== '') {
-            $where .= '
-                OR current_db.phone LIKE :phone
-            ';
+            $searchParts[] =
+                'current_db.phone LIKE :phone';
 
             $params['phone'] =
                 '%' . $phoneSearch . '%';
         }
 
-        $where .= '
-            )
-        ';
+        $where[] =
+            '(' . implode(
+                ' OR ',
+                $searchParts
+            ) . ')';
     }
 
-
     /*
-    * Сумма задолженности в предыдущем снимке.
-    *
-    * Важно:
-    * сравниваем именно с предыдущим UPDATE,
-    * а не с предыдущей строкой id внутри того же снимка.
-    */
-    $previousSumSql = '
-        (
-            SELECT CAST(
+     * Если нужны фильтры по начислениям/оплате,
+     * подключаем предыдущий снимок.
+     */
+    $needPrevious =
+        $withoutCharges
+        || $withoutPayments;
+
+    $join = '';
+
+    if (
+        $needPrevious
+        && $previousUpdate !== ''
+    ) {
+        $join = '
+            LEFT JOIN master_database AS previous_db
+                ON previous_db.personal = current_db.personal
+                AND previous_db.`update` = :previous_update
+        ';
+
+        $params['previous_update'] =
+            $previousUpdate;
+
+        /*
+         * Значение текущей задолженности.
+         */
+        $currentSum = "
+            CAST(
                 REPLACE(
                     REPLACE(
-                        TRIM(previous.summ),
-                        \' \',
-                        \'\'
+                        TRIM(current_db.summ),
+                        ' ',
+                        ''
                     ),
-                    \',\',
-                    \'.\'
-                ) AS DECIMAL(20,4)
+                    ',',
+                    '.'
+                )
+                AS DECIMAL(20,4)
             )
-            FROM master_database AS previous
-            WHERE previous.personal = current_db.personal
-            AND previous.`update` REGEXP \'^[0-9]+$\'
-            AND CAST(previous.`update` AS UNSIGNED)
-                < CAST(current_db.`update` AS UNSIGNED)
-            ORDER BY
-                CAST(previous.`update` AS UNSIGNED) DESC,
-                previous.id DESC
-            LIMIT 1
-        )
-    ';
+        ";
 
-    $currentSumSql = '
-        CAST(
-            REPLACE(
+        /*
+         * Значение задолженности
+         * предыдущего снимка.
+         */
+        $previousSum = "
+            CAST(
                 REPLACE(
-                    TRIM(current_db.summ),
-                    \' \',
-                    \'\'
-                ),
-                \',\',
-                \'.\'
-            ) AS DECIMAL(20,4)
-        )
-    ';
-
-
-    /*
-    * Без начислений.
-    *
-    * Последний снимок не должен показывать увеличение
-    * задолженности относительно предыдущего.
-    *
-    * current <= previous
-    */
-    if ($withoutCharges) {
-        $where .= '
-            AND (
-                ' . $previousSumSql . ' IS NULL
-                OR
-                ' . $currentSumSql . '
-                    <= ' . $previousSumSql . '
+                    REPLACE(
+                        TRIM(previous_db.summ),
+                        ' ',
+                        ''
+                    ),
+                    ',',
+                    '.'
+                )
+                AS DECIMAL(20,4)
             )
-        ';
+        ";
+
+        /*
+         * Без начислений:
+         *
+         * задолженность не увеличилась.
+         *
+         * previous: 10
+         * current:  10  -> подходит
+         *
+         * previous: 10
+         * current:   5  -> подходит
+         *
+         * previous: 10
+         * current:  15  -> НЕ подходит
+         */
+        if ($withoutCharges) {
+            $where[] = '
+                (
+                    previous_db.id IS NULL
+                    OR ' . $currentSum . '
+                       <= ' . $previousSum . '
+                )
+            ';
+        }
+
+        /*
+         * Без оплаты:
+         *
+         * задолженность не уменьшилась.
+         *
+         * previous: 10
+         * current:  10  -> подходит
+         *
+         * previous: 10
+         * current:  15  -> подходит
+         *
+         * previous: 10
+         * current:   5  -> НЕ подходит
+         */
+        if ($withoutPayments) {
+            $where[] = '
+                (
+                    previous_db.id IS NULL
+                    OR ' . $currentSum . '
+                       >= ' . $previousSum . '
+                )
+            ';
+        }
     }
 
+    /*
+     * Если предыдущего снимка вообще нет,
+     * фильтры ничего исключать не могут.
+     */
+    $sqlWhere =
+        implode(
+            ' AND ',
+            $where
+        );
 
     /*
-    * Без оплаты.
-    *
-    * Последний снимок не должен показывать уменьшение
-    * задолженности относительно предыдущего.
-    *
-    * current >= previous
-    */
-    if ($withoutPayments) {
-        $where .= '
-            AND (
-                ' . $previousSumSql . ' IS NULL
-                OR
-                ' . $currentSumSql . '
-                    >= ' . $previousSumSql . '
-            )
-        ';
-    }
+     * COUNT.
+     */
+    $countSql = '
+        SELECT COUNT(*)
+        FROM master_database AS current_db
+        ' . $join . '
+        WHERE ' . $sqlWhere;
 
     $count = $this->db->prepare(
-        'SELECT COUNT(*)
-        FROM master_database AS current_db
-        WHERE ' . $where
+        $countSql
     );
 
     foreach ($params as $key => $value) {
@@ -1244,21 +1324,34 @@ public function list(
 
     $count->execute();
 
-    $total = (int) $count->fetchColumn();
+    $total =
+        (int) $count->fetchColumn();
 
-    $query = $this->db->prepare(
-        'SELECT current_db.*
+    /*
+     * Основная выборка.
+     */
+    $sql = '
+        SELECT current_db.*
         FROM master_database AS current_db
-        WHERE ' . $where . '
+        ' . $join . '
+        WHERE ' . $sqlWhere . '
         ORDER BY
             CASE
-                WHEN TRIM(current_db.tarif) = \'Нет договора\'
+                WHEN TRIM(current_db.tarif)
+                    = \'Нет договора\'
                 THEN 1
                 ELSE 0
             END ASC,
-            CAST(current_db.summ AS SIGNED) DESC
+            CAST(
+                current_db.summ
+                AS SIGNED
+            ) DESC
         LIMIT :limit
-        OFFSET :offset'
+        OFFSET :offset
+    ';
+
+    $query = $this->db->prepare(
+        $sql
     );
 
     foreach ($params as $key => $value) {
@@ -1289,6 +1382,9 @@ public function list(
         'update' => $update,
     ];
 }
+
+
+
 
     public function history(string $personal): array
     {
