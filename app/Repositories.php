@@ -1092,11 +1092,16 @@ private function normalizeImportedSum(
 
         
 
-public function list(string $search, int $limit, int $offset): array
-{
+public function list(
+    string $search,
+    bool $withoutCharges,
+    bool $withoutPayments,
+    int $limit,
+    int $offset
+): array {
     $update = $this->latestUpdate();
 
-    $where = '`update` = :update';
+    $where = 'current_db.`update` = :update';
 
     $params = [
         'update' => $update,
@@ -1107,9 +1112,9 @@ public function list(string $search, int $limit, int $offset): array
 
         $where .= '
             AND (
-                personal LIKE :personal
-                OR account LIKE :account
-                OR address LIKE :address
+                current_db.personal LIKE :personal
+                OR current_db.account LIKE :account
+                OR current_db.address LIKE :address
         ';
 
         $params['personal'] = $search . '%';
@@ -1124,10 +1129,11 @@ public function list(string $search, int $limit, int $offset): array
 
         if ($phoneSearch !== '') {
             $where .= '
-                OR phone LIKE :phone
+                OR current_db.phone LIKE :phone
             ';
 
-            $params['phone'] = '%' . $phoneSearch . '%';
+            $params['phone'] =
+                '%' . $phoneSearch . '%';
         }
 
         $where .= '
@@ -1135,9 +1141,79 @@ public function list(string $search, int $limit, int $offset): array
         ';
     }
 
+    /*
+     * Без начислений:
+     *
+     * исключаем абонента, если хотя бы в одном
+     * историческом снимке его задолженность
+     * стала больше предыдущей.
+     */
+    if ($withoutCharges) {
+        $where .= '
+            AND NOT EXISTS (
+                SELECT 1
+                FROM master_database AS history
+                WHERE history.personal = current_db.personal
+                AND CAST(history.summ AS DECIMAL(20,4)) > (
+                    SELECT CAST(previous.summ AS DECIMAL(20,4))
+                    FROM master_database AS previous
+                    WHERE previous.personal = history.personal
+                    AND (
+                        CAST(previous.`update` AS UNSIGNED)
+                            < CAST(history.`update` AS UNSIGNED)
+                        OR (
+                            CAST(previous.`update` AS UNSIGNED)
+                                = CAST(history.`update` AS UNSIGNED)
+                            AND previous.id < history.id
+                        )
+                    )
+                    ORDER BY
+                        CAST(previous.`update` AS UNSIGNED) DESC,
+                        previous.id DESC
+                    LIMIT 1
+                )
+            )
+        ';
+    }
+
+    /*
+     * Без оплаты:
+     *
+     * исключаем абонента, если хотя бы в одном
+     * историческом снимке его задолженность
+     * стала меньше предыдущей.
+     */
+    if ($withoutPayments) {
+        $where .= '
+            AND NOT EXISTS (
+                SELECT 1
+                FROM master_database AS history
+                WHERE history.personal = current_db.personal
+                AND CAST(history.summ AS DECIMAL(20,4)) < (
+                    SELECT CAST(previous.summ AS DECIMAL(20,4))
+                    FROM master_database AS previous
+                    WHERE previous.personal = history.personal
+                    AND (
+                        CAST(previous.`update` AS UNSIGNED)
+                            < CAST(history.`update` AS UNSIGNED)
+                        OR (
+                            CAST(previous.`update` AS UNSIGNED)
+                                = CAST(history.`update` AS UNSIGNED)
+                            AND previous.id < history.id
+                        )
+                    )
+                    ORDER BY
+                        CAST(previous.`update` AS UNSIGNED) DESC,
+                        previous.id DESC
+                    LIMIT 1
+                )
+            )
+        ';
+    }
+
     $count = $this->db->prepare(
         'SELECT COUNT(*)
-        FROM master_database
+        FROM master_database AS current_db
         WHERE ' . $where
     );
 
@@ -1154,16 +1230,18 @@ public function list(string $search, int $limit, int $offset): array
     $total = (int) $count->fetchColumn();
 
     $query = $this->db->prepare(
-        'SELECT *
-        FROM master_database
+        'SELECT current_db.*
+        FROM master_database AS current_db
         WHERE ' . $where . '
         ORDER BY
             CASE
-                WHEN TRIM(tarif) = \'Нет договора\' THEN 1
+                WHEN TRIM(current_db.tarif) = \'Нет договора\'
+                THEN 1
                 ELSE 0
             END ASC,
-            CAST(summ AS SIGNED) DESC
-        LIMIT :limit OFFSET :offset'
+            CAST(current_db.summ AS SIGNED) DESC
+        LIMIT :limit
+        OFFSET :offset'
     );
 
     foreach ($params as $key => $value) {

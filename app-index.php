@@ -54,6 +54,14 @@ $search = get_string('search', 100);
 
 $status = 'open';
 
+$withoutCharges =
+    isset($_GET['without_charges'])
+    && $_GET['without_charges'] === '1';
+
+$withoutPayments =
+    isset($_GET['without_payments'])
+    && $_GET['without_payments'] === '1';
+
 $tickets = new TicketRepository($pdo);
 $connections = new ConnectionRepository($pdo);
 $subscribers = new SubscriberRepository($pdo);
@@ -1736,6 +1744,8 @@ if (
 ) {
     $data = $subscribers->list(
         $search,
+        $withoutCharges,
+        $withoutPayments,
         $perPage,
         $offset
     );

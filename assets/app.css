@@ -3324,3 +3324,25 @@ a.send_sms_find_tickets:hover, a.subscriber-card__name:hover, .data-subscriber-t
     color: var(--muted);
     font-weight: 400;
 }
+
+
+
+.search-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+}
+
+.search-checkbox input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.search-checkbox span {
+    font-size: 14px;
+}

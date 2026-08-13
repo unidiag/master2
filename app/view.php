@@ -27,6 +27,8 @@ require_once __DIR__ . '/SmsButton.php';
 /** @var string $subscriberKarandashDescr */
 /** @var string $houseDescr */
 /** @var float $subscriberDebt */
+/** @var bool $withoutCharges */
+/** @var bool $withoutPayments */
 $subscriberDebt = isset($subscriberDebt)
     ? (float) $subscriberDebt
     : 0.0;
@@ -34,6 +36,14 @@ $subscriberDebt = isset($subscriberDebt)
 $houseDescr = isset($houseDescr)
     ? trim((string) $houseDescr)
     : '';
+
+$withoutCharges = isset($withoutCharges)
+    ? (bool) $withoutCharges
+    : false;
+
+$withoutPayments = isset($withoutPayments)
+    ? (bool) $withoutPayments
+    : false;
 
 ?>
 <!doctype html>
@@ -182,8 +192,36 @@ $jsVersion = is_file($jsFile)
                             Выполненные
                         </option>
                     </select>
-                    <?php endif; ?>
-                    <button class="button" type="submit">Найти</button>
+                <?php endif; ?>
+
+                <button class="button" type="submit">
+                    Найти
+                </button>
+
+                <?php if ($module === 'database'): ?>
+
+                    <label class="search-checkbox">
+                        <input
+                            type="checkbox"
+                            name="without_charges"
+                            value="1"
+                            <?= $withoutCharges ? 'checked' : '' ?>
+                        >
+                        <span>Без начислений</span>
+                    </label>
+
+                    <label class="search-checkbox">
+                        <input
+                            type="checkbox"
+                            name="without_payments"
+                            value="1"
+                            <?= $withoutPayments ? 'checked' : '' ?>
+                        >
+                        <span>Без оплаты</span>
+                    </label>
+
+                <?php endif; ?>
+
                 </form>
                 <?php if ($module !== 'database'): ?>
                     <button
@@ -4737,9 +4775,72 @@ function sortCards() {
 
 
 
-        <?php if ($module !== 'stat' && isset($data['total']) && $data['total'] > $perPage): $pages=(int)ceil($data['total']/$perPage); ?>
-        <nav class="pagination"><?php if($page>1): ?><a class="button" href="<?= e(url(['module'=>$module,'search'=>$search,'status'=>$status,'page'=>$page-1])) ?>">← Назад</a><?php endif; ?><span>Страница <?= e($page) ?> из <?= e($pages) ?></span><?php if($page<$pages): ?><a class="button" href="<?= e(url(['module'=>$module,'search'=>$search,'status'=>$status,'page'=>$page+1])) ?>">Далее →</a><?php endif; ?></nav>
+<?php if (
+    $module !== 'stat'
+    && isset($data['total'])
+    && $data['total'] > $perPage
+):
+    $pages = (int) ceil(
+        $data['total'] / $perPage
+    );
+
+    $paginationParams = [
+        'module' => $module,
+        'search' => $search,
+        'status' => $status,
+    ];
+
+    if (
+        $module === 'database'
+        && $withoutCharges
+    ) {
+        $paginationParams['without_charges'] = '1';
+    }
+
+    if (
+        $module === 'database'
+        && $withoutPayments
+    ) {
+        $paginationParams['without_payments'] = '1';
+    }
+?>
+
+    <nav class="pagination">
+
+        <?php if ($page > 1): ?>
+            <a
+                class="button"
+                href="<?= e(url(
+                    $paginationParams + [
+                        'page' => $page - 1,
+                    ]
+                )) ?>"
+            >
+                ← Назад
+            </a>
         <?php endif; ?>
+
+        <span>
+            Страница <?= e($page) ?>
+            из <?= e($pages) ?>
+        </span>
+
+        <?php if ($page < $pages): ?>
+            <a
+                class="button"
+                href="<?= e(url(
+                    $paginationParams + [
+                        'page' => $page + 1,
+                    ]
+                )) ?>"
+            >
+                Далее →
+            </a>
+        <?php endif; ?>
+
+    </nav>
+
+<?php endif; ?>
     </main>
 </div>
 
