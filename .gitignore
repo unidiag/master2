@@ -1,0 +1,10 @@
+/config.local.php
+/assets/meteo.png
+/.idea/
+/runtime/
+/.vscode/
+/cron/*.txt
+/sms.txt
+*.log
+qr.tar.gz
+meteo.php
