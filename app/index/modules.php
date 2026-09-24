@@ -2201,8 +2201,8 @@ if ($module === 'stat') {
                 * совпадение адреса.
                 */
                 if (
-                    $ticketAddress
-                    !== $subscriberAddress
+                    normalize_address_key($ticketAddress)
+                    !== normalize_address_key($subscriberAddress)
                 ) {
                     continue;
                 }
@@ -2305,8 +2305,8 @@ if ($module === 'stat') {
                 );
 
                 if (
-                    $connectionAddress
-                    !== $subscriberAddress
+                    normalize_address_key($connectionAddress)
+                    !== normalize_address_key($subscriberAddress)
                 ) {
                     continue;
                 }

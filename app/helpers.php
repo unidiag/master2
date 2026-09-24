@@ -811,6 +811,26 @@ function send_notification_sms(
 
 
 
+function normalize_address_key(string $address): string
+{
+    $address = normalize_address($address);
+
+    $address = mb_strtolower(
+        trim($address),
+        'UTF-8'
+    );
+
+    $address = str_replace(
+        'ё',
+        'е',
+        $address
+    );
+
+    return $address;
+}
+
+
+
 
 function save_user_stat(PDO $pdo): void
 {

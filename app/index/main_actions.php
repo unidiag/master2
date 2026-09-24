@@ -776,9 +776,9 @@ if (
                 . $abonent . PHP_EOL
                 . $description;
 
-            if ($other !== '') {
-                $message .= PHP_EOL . $other;
-            }
+            // if ($other !== '') {
+            //     $message .= PHP_EOL . $other;
+            // }
 
             send_notification_sms(
                 $pdo,
@@ -989,17 +989,17 @@ if (
                 . $address . PHP_EOL
                 . $abonent;
 
-            if ($description !== '') {
-                $message .=
-                    PHP_EOL
-                    . $description;
-            }
+            // if ($description !== '') {
+            //     $message .=
+            //         PHP_EOL
+            //         . $description;
+            // }
 
-            if ($other !== '') {
-                $message .=
-                    PHP_EOL
-                    . $other;
-            }
+            // if ($other !== '') {
+            //     $message .=
+            //         PHP_EOL
+            //         . $other;
+            // }
 
             send_notification_sms(
                 $pdo,
