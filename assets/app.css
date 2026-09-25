@@ -1899,18 +1899,60 @@ button,input,select {
    АВТОРИЗАЦИЯ И ПОЛЬЗОВАТЕЛЬ
    ========================================================================== */
 
-.auth-card,
-.login-card,
-.login-form,
+.auth-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    min-height: 100dvh;
+    padding: 20px;
+}
+
 .auth-form {
-    margin: 20px;
+    display: grid;
+    gap: 18px;
+
+    width: 100%;
+    max-width: 380px;
+    padding: 28px;
+
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+.auth-form h1 {
+    margin: 0 0 4px;
+    text-align: center;
+    font-size: 1.5rem;
+}
+
+.auth-form > label:not(.auth-remember) {
+    display: grid;
+    gap: 7px;
+
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.auth-form .input {
+    width: 100%;
+}
+
+.auth-form .button {
+    width: 100%;
 }
 
 .auth-remember {
     display: flex;
     align-items: center;
     gap: 9px;
+
     width: fit-content;
+    margin: 0 auto;
+
     cursor: pointer;
     user-select: none;
 }
@@ -1919,6 +1961,7 @@ button,input,select {
     width: 18px;
     height: 18px;
     margin: 0;
+
     accent-color: var(--primary, #2563eb);
     cursor: pointer;
 }
@@ -1928,8 +1971,19 @@ button,input,select {
     font-weight: 500;
 }
 
-.user-badge--logout {
+.auth-form .alert {
     margin: 0;
+}
+
+@media (max-width: 480px) {
+    .auth-page {
+        padding: 16px;
+    }
+
+    .auth-form {
+        max-width: 100%;
+        padding: 22px 18px;
+    }
 }
 
 .user-badge__button {
