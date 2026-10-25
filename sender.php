@@ -249,7 +249,22 @@ $ip = trim(
     (string) ($_SERVER['REMOTE_ADDR'] ?? '')
 );
 
-if (!is_bogon_ip($ip)) {
+/*
+ * Разрешённые публичные IP-адреса.
+ */
+$allowedIps = [
+    '86.57.171.81',
+];
+
+/*
+ * Разрешаем:
+ * - bogon-сети;
+ * - IP из белого списка.
+ */
+if (
+    !is_bogon_ip($ip)
+    && !in_array($ip, $allowedIps, true)
+) {
     response_json(
         403,
         [
@@ -278,6 +293,178 @@ if (
         ]
     );
 }
+
+
+
+
+
+/*
+ * Отправка случайного 4-значного SMS-кода.
+ *
+ * POST code=80297153616
+ * POST code=375297153616
+ * POST code=+375297153616
+ *
+ * Ответ:
+ * {"ok":true,"code":"1234"}
+ */
+if (array_key_exists('code', $_POST)) {
+
+    /*
+     * Проверяем входной параметр.
+     */
+    if (!is_string($_POST['code'])) {
+        response_json(400, [
+            'ok' => false,
+            'error' => 'Invalid phone number',
+        ]);
+    }
+
+    /*
+     * Убираем пробелы, скобки и дефисы.
+     */
+    $phone = preg_replace(
+        '/[\s()\-]+/u',
+        '',
+        trim($_POST['code'])
+    );
+
+    /*
+     * Нормализация белорусского номера.
+     *
+     * 80297153616
+     * 375297153616
+     * +375297153616
+     *
+     * Все форматы приводим к +375XXXXXXXXX.
+     */
+    if (
+        !preg_match(
+            '/^(?:80|375|\+375)(25|29|33|44)(\d{7})$/',
+            $phone,
+            $matches
+        )
+    ) {
+        response_json(400, [
+            'ok' => false,
+            'error' => 'Invalid Belarus mobile number',
+        ]);
+    }
+
+    $phone = '+375' . $matches[1] . $matches[2];
+
+    /*
+     * Конфигурация MTS SMS.
+     */
+    $smsConfig = $config['mts_sms'] ?? [];
+
+    if (!(bool) ($smsConfig['enabled'] ?? false)) {
+        response_json(503, [
+            'ok' => false,
+            'error' => 'SMS service disabled',
+        ]);
+    }
+
+    /*
+     * Общий лимит:
+     * не более 2 сообщений за 60 секунд.
+     */
+    if (!rate_limit_check()) {
+        response_json(429, [
+            'ok' => false,
+            'error' => 'Too Many Requests',
+        ]);
+    }
+
+    /*
+     * Генерация случайного 4-значного кода.
+     */
+    $smsCode = (string) random_int(1000, 9999);
+
+    /*
+     * Отправка SMS через MtsSmsService.
+     */
+    try {
+
+        $smsService = new MtsSmsService($smsConfig);
+
+        $messageId = $smsService->send(
+            $phone,
+            $smsCode
+        );
+
+        /*
+         * Сохраняем в журнал master_sms.
+         */
+        try {
+
+            $statement = $pdo->prepare(
+                '
+                INSERT INTO master_sms (
+                    abonent,
+                    address,
+                    phone,
+                    message,
+                    message_id
+                ) VALUES (
+                    :abonent,
+                    :address,
+                    :phone,
+                    :message,
+                    :message_id
+                )
+                '
+            );
+
+            $statement->execute([
+                'abonent' => '',
+                'address' => '',
+                'phone' => preg_replace('/\D+/', '', $phone),
+                'message' => $smsCode,
+                'message_id' => $messageId,
+            ]);
+
+        } catch (Throwable $exception) {
+
+            /*
+             * Ошибка журнала не отменяет
+             * успешную отправку SMS.
+             */
+            error_log(
+                'SMS code log error: '
+                . $exception->getMessage()
+            );
+        }
+
+    } catch (Throwable $exception) {
+
+        error_log(
+            'SMS code sending error: '
+            . $exception->getMessage()
+        );
+
+        response_json(502, [
+            'ok' => false,
+            'error' => 'SMS sending failed',
+        ]);
+    }
+
+    /*
+     * SMS принято сервисом отправки.
+     * Возвращаем код.
+     */
+    response_json(200, [
+        'ok' => true,
+        'code' => $smsCode,
+    ]);
+}
+
+
+
+
+
+
+
 
 
 /*
