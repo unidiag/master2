@@ -1277,64 +1277,59 @@ function subscribers_count_by_date(
     }
 
     /*
-     * Состояние на начало периода.
-     */
+    * Состояние на начало периода
+    * (до применения изменений первого дня).
+    */
     $start = $current;
-
-    $dailySum = [
-        0,
-        0,
-        0,
-    ];
-
-    $days = 0;
 
     $day = $dateStart;
 
+    /*
+    * Применяем изменения первого дня периода.
+    */
+    $firstDayKey = $day->format('Y-m-d');
+
+    if (isset($dailyChanges[$firstDayKey])) {
+        for ($i = 0; $i < 3; $i++) {
+            $current[$i] += $dailyChanges[$firstDayKey][$i];
+        }
+    }
+
+    /*
+    * Количество абонентов на первый день периода.
+    */
+    $firstDay = $current;
+
+    /*
+    * Применяем изменения остальных дней.
+    */
+    $day = $day->modify('+1 day');
+
     while ($day <= $dateEnd) {
-        $key = $day->format(
-            'Y-m-d'
-        );
+        $key = $day->format('Y-m-d');
 
         if (isset($dailyChanges[$key])) {
             for ($i = 0; $i < 3; $i++) {
-                $current[$i] +=
-                    $dailyChanges[$key][$i];
+                $current[$i] += $dailyChanges[$key][$i];
             }
         }
 
-        for ($i = 0; $i < 3; $i++) {
-            $dailySum[$i] +=
-                $current[$i];
-        }
-
-        $days++;
-
-        $day = $day->modify(
-            '+1 day'
-        );
+        $day = $day->modify('+1 day');
     }
 
+    /*
+    * Количество абонентов на последний день периода.
+    */
     $end = $current;
 
+    /*
+    * Среднее количество абонентов:
+    * (первый день + последний день) / 2.
+    */
     $avg = [
-        $days > 0
-            ? (int) round(
-                $dailySum[0] / $days
-            )
-            : $start[0],
-
-        $days > 0
-            ? (int) round(
-                $dailySum[1] / $days
-            )
-            : $start[1],
-
-        $days > 0
-            ? (int) round(
-                $dailySum[2] / $days
-            )
-            : $start[2],
+        (int) round(($firstDay[0] + $end[0]) / 2),
+        (int) round(($firstDay[1] + $end[1]) / 2),
+        (int) round(($firstDay[2] + $end[2]) / 2),
     ];
 
     /*
@@ -1458,11 +1453,12 @@ function subscribers_count_by_date(
             + $end[2]
             + $iptvEnd,
 
-        'total_avg' =>
-            $avg[0]
-            + $avg[1]
-            + $avg[2]
-            + $iptvAvg,
+        'total_avg' => (int) round(
+            (
+                array_sum($firstDay)
+                + array_sum($end)
+            ) / 2
+        ) + $iptvAvg,
     ];
 }
 

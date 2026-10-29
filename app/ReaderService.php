@@ -719,7 +719,7 @@ final class ReaderService
 
         $options = '';
 
-        if ($reader !== 10 && $reader !== 16) {
+        if ($reader !== 3) {
             $options = ' -S';
         }
 
